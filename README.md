@@ -24,10 +24,13 @@ Vertical claire : **commerciaux / freelances / TPE** qui veulent rester top-of-m
 
 ```bash
 npm install
-npm run dev -- -p 43123
+npm run build
+npm start
 ```
 
 Ouvrir [http://127.0.0.1:43123](http://127.0.0.1:43123).
+
+Dev hot-reload : `npm run dev` (port 43123).
 
 1. Landing → **Ouvrir l’app**
 2. Créer un espace Free

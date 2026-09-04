@@ -76,7 +76,9 @@ export default function SettingsPage() {
               <p className="mt-2 text-sm text-[#5a6b63]">{plan.description}</p>
               <ul className="mt-4 space-y-1 text-sm text-[#5a6b63]">
                 <li>· {plan.contacts} contacts</li>
-                <li>· {plan.sequences} séquences</li>
+                <li>
+                  · {plan.sequences} séquence{plan.sequences > 1 ? "s" : ""}
+                </li>
                 <li>· Canaux : {plan.channels.join(", ")}</li>
               </ul>
               <Button
