@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
+import { HelpChatbot } from "@/components/help-chatbot";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -25,7 +26,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className={`${figtree.variable} ${bricolage.variable} h-full`}>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="flex min-h-full flex-col font-sans">
+        {children}
+        <HelpChatbot />
+      </body>
     </html>
   );
 }

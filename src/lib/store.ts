@@ -14,7 +14,11 @@ import type {
 } from "./types";
 import { DEFAULT_SEND_TIMES } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = process.env.DATA_DIR
+  ? process.env.DATA_DIR
+  : process.env.VERCEL
+    ? path.join(process.env.TMPDIR || "/tmp", "nevermiss-data")
+    : path.join(process.cwd(), "data");
 const STORE_PATH = path.join(DATA_DIR, "store.json");
 
 const defaultChannels = (): ChannelSettings => ({

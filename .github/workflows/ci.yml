@@ -1,0 +1,22 @@
+name: Deploy NeverMiss
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  # Déploiement recommandé : connecte ce repo à Vercel (Import GitHub).
+  # GitHub Pages ne convient PAS (Next.js API + cron).
+  # Après import Vercel, les pushes sur main se déploient automatiquement.
