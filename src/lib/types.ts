@@ -2,6 +2,8 @@ export type PlanId = "free" | "pro" | "enterprise";
 
 export type Channel = "email" | "whatsapp" | "linkedin";
 
+export type RelationType = "ami" | "famille" | "travail";
+
 export type Occasion =
   | "birthday"
   | "christmas"
@@ -11,6 +13,7 @@ export type Occasion =
 
 export type MessageStatus =
   | "scheduled"
+  | "ready"
   | "sent"
   | "failed"
   | "skipped"
@@ -25,6 +28,9 @@ export interface Contact {
   company?: string;
   birthday?: string; // YYYY-MM-DD
   notes?: string;
+  relationType: RelationType;
+  /** Heure locale d’envoi HH:mm — prioritaire sur les défauts du plan */
+  sendTime?: string;
   preferredChannels: Channel[];
   createdAt: string;
 }
@@ -41,7 +47,7 @@ export interface Template {
 
 export interface SequenceStep {
   id: string;
-  dayOffset: number; // relative to event day (0 = day of)
+  dayOffset: number;
   templateId: string;
   channel: Channel;
 }
@@ -64,10 +70,12 @@ export interface ScheduledMessage {
   occasion: Occasion;
   subject?: string;
   body: string;
-  scheduledAt: string; // ISO
+  scheduledAt: string;
   status: MessageStatus;
   error?: string;
   sentAt?: string;
+  /** Lien 1 clic (WhatsApp / Gmail / LinkedIn) */
+  deepLink?: string;
   createdAt: string;
 }
 
@@ -84,27 +92,40 @@ export interface SmtpSettings {
 export interface ChannelSettings {
   email: {
     enabled: boolean;
-    mode: "smtp" | "demo";
+    mode: "smtp" | "demo" | "gmail_compose";
     smtp?: SmtpSettings;
   };
   whatsapp: {
     enabled: boolean;
     mode: "wa_me" | "business_api";
+    /** Votre numéro WhatsApp (identité expéditeur) */
+    ownerPhone?: string;
     businessToken?: string;
     phoneNumberId?: string;
   };
   linkedin: {
     enabled: boolean;
     mode: "manual" | "api";
+    /** Votre profil LinkedIn */
+    ownerProfileUrl?: string;
   };
+}
+
+export interface SendTimeDefaults {
+  ami: string;
+  famille: string;
+  travail: string;
 }
 
 export interface Workspace {
   id: string;
   ownerEmail: string;
   ownerName: string;
+  ownerPhone?: string;
+  ownerLinkedIn?: string;
   plan: PlanId;
   channels: ChannelSettings;
+  sendTimeDefaults: SendTimeDefaults;
   createdAt: string;
 }
 
@@ -123,6 +144,18 @@ export interface AppStore {
   messages: ScheduledMessage[];
   activity: ActivityItem[];
 }
+
+export const DEFAULT_SEND_TIMES: SendTimeDefaults = {
+  ami: "10:30",
+  famille: "09:00",
+  travail: "08:45",
+};
+
+export const RELATION_LABELS: Record<RelationType, string> = {
+  ami: "Ami",
+  famille: "Famille",
+  travail: "Travail",
+};
 
 export const PLAN_LIMITS: Record<
   PlanId,

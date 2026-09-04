@@ -17,6 +17,8 @@ const schema = z.object({
   company: z.string().optional(),
   birthday: z.string().optional(),
   notes: z.string().optional(),
+  relationType: z.enum(["ami", "famille", "travail"]).default("ami"),
+  sendTime: z.string().optional(),
   preferredChannels: z.array(z.enum(["email", "whatsapp", "linkedin"])),
 });
 
@@ -27,7 +29,10 @@ export async function GET() {
 export async function POST(req: Request) {
   const store = await getStore();
   if (!store.workspace) {
-    return NextResponse.json({ error: "Créez d’abord un espace" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Créez d’abord un espace" },
+      { status: 400 }
+    );
   }
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {
@@ -45,6 +50,7 @@ export async function POST(req: Request) {
   const contact = await upsertContact({
     ...parsed.data,
     email: parsed.data.email || undefined,
+    sendTime: parsed.data.sendTime || undefined,
   });
   return NextResponse.json(contact);
 }

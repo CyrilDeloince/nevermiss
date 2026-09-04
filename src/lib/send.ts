@@ -1,12 +1,15 @@
 import nodemailer from "nodemailer";
-import type { ScheduledMessage, Workspace } from "./types";
+import type { Contact, ScheduledMessage, Workspace } from "./types";
 import { addActivity, updateMessage } from "./store";
-import { whatsappDeepLink } from "./messages";
-import type { Contact } from "./types";
+import {
+  gmailComposeLink,
+  mailtoLink,
+  whatsappDeepLink,
+} from "./messages";
 
 export type SendResult = {
   id: string;
-  status: "sent" | "failed" | "skipped";
+  status: "sent" | "ready" | "failed" | "skipped";
   detail: string;
   deepLink?: string;
 };
@@ -25,40 +28,44 @@ async function sendEmail(
     };
   }
 
-  if (emailCfg.mode === "demo" || !emailCfg.smtp?.host) {
-    await addActivity(
-      "sent",
-      `[DEMO email] → ${contact.email} : ${message.subject ?? "(sans objet)"}`
-    );
+  const subject = message.subject ?? "Message NeverMiss";
+
+  if (emailCfg.mode === "smtp" && emailCfg.smtp?.host) {
+    const smtp = emailCfg.smtp;
+    const transporter = nodemailer.createTransport({
+      host: smtp.host,
+      port: smtp.port,
+      secure: smtp.secure,
+      auth: { user: smtp.user, pass: smtp.pass },
+    });
+    await transporter.sendMail({
+      from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
+      to: contact.email,
+      subject,
+      text: message.body,
+    });
     return {
       id: message.id,
       status: "sent",
-      detail: `Email simulé vers ${contact.email} (mode démo — configurez SMTP pour l’envoi réel)`,
+      detail: `Email envoyé à ${contact.email}`,
     };
   }
 
-  const smtp = emailCfg.smtp;
-  const transporter = nodemailer.createTransport({
-    host: smtp.host,
-    port: smtp.port,
-    secure: smtp.secure,
-    auth: {
-      user: smtp.user,
-      pass: smtp.pass,
-    },
-  });
+  // Gmail compose / mailto : 1 clic depuis ton compte Google
+  const deepLink =
+    emailCfg.mode === "gmail_compose" || emailCfg.mode === "demo"
+      ? gmailComposeLink(contact.email, subject, message.body)
+      : mailtoLink(contact.email, subject, message.body);
 
-  await transporter.sendMail({
-    from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
-    to: contact.email,
-    subject: message.subject ?? "Message NeverMiss",
-    text: message.body,
-  });
-
+  await addActivity(
+    "info",
+    `Gmail prêt pour ${contact.name} — ouvrez le lien pour envoyer depuis votre boîte`
+  );
   return {
     id: message.id,
-    status: "sent",
-    detail: `Email envoyé à ${contact.email}`,
+    status: "ready",
+    detail: `Ouvrir Gmail pour envoyer à ${contact.email}`,
+    deepLink,
   };
 }
 
@@ -71,7 +78,8 @@ async function sendWhatsApp(
     return {
       id: message.id,
       status: "failed",
-      detail: "Contact sans téléphone",
+      detail:
+        "Contact sans téléphone WhatsApp — ajoutez le numéro du destinataire",
     };
   }
 
@@ -118,15 +126,15 @@ async function sendWhatsApp(
     };
   }
 
-  // Mode wa.me : file d’attente + lien prêt (envoi 1 clic, sans API payante)
+  const from = workspace.ownerPhone || workspace.channels.whatsapp.ownerPhone;
   await addActivity(
     "info",
-    `WhatsApp prêt (lien wa.me) pour ${contact.name} — ouvrez le lien pour envoyer`
+    `WhatsApp prêt pour ${contact.name}${from ? ` (depuis ${from})` : ""} — 1 clic pour ouvrir la conversation`
   );
   return {
     id: message.id,
-    status: "sent",
-    detail: `Lien WhatsApp généré pour ${contact.name}`,
+    status: "ready",
+    detail: `Ouvrir WhatsApp pour ${contact.name}`,
     deepLink: link,
   };
 }
@@ -144,12 +152,12 @@ async function sendLinkedIn(
   }
   await addActivity(
     "info",
-    `LinkedIn prêt pour ${contact.name} — message à coller manuellement (API LinkedIn restreinte)`
+    `LinkedIn prêt pour ${contact.name} — ouvrez le profil et collez le message`
   );
   return {
     id: message.id,
-    status: "sent",
-    detail: `Brouillon LinkedIn prêt pour ${contact.name}`,
+    status: "ready",
+    detail: `Ouvrir LinkedIn pour ${contact.name}`,
     deepLink: contact.linkedinUrl,
   };
 }
@@ -170,13 +178,25 @@ export async function dispatchMessage(
     }
 
     await updateMessage(message.id, {
-      status: result.status === "sent" ? "sent" : result.status,
-      sentAt: result.status === "sent" ? new Date().toISOString() : undefined,
+      status:
+        result.status === "sent"
+          ? "sent"
+          : result.status === "ready"
+            ? "ready"
+            : result.status,
+      sentAt:
+        result.status === "sent" || result.status === "ready"
+          ? new Date().toISOString()
+          : undefined,
+      deepLink: result.deepLink,
       error: result.status === "failed" ? result.detail : undefined,
     });
 
-    if (result.status === "sent") {
-      await addActivity("sent", result.detail);
+    if (result.status === "sent" || result.status === "ready") {
+      await addActivity(
+        result.status === "sent" ? "sent" : "info",
+        result.detail
+      );
     } else if (result.status === "failed") {
       await addActivity("failed", result.detail);
     }

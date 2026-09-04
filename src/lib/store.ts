@@ -8,9 +8,11 @@ import type {
   Contact,
   ScheduledMessage,
   Sequence,
+  SendTimeDefaults,
   Template,
   Workspace,
 } from "./types";
+import { DEFAULT_SEND_TIMES } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const STORE_PATH = path.join(DATA_DIR, "store.json");
@@ -18,17 +20,50 @@ const STORE_PATH = path.join(DATA_DIR, "store.json");
 const defaultChannels = (): ChannelSettings => ({
   email: {
     enabled: true,
-    mode: "demo",
+    mode: "gmail_compose",
   },
   whatsapp: {
-    enabled: false,
+    enabled: true,
     mode: "wa_me",
   },
   linkedin: {
-    enabled: false,
+    enabled: true,
     mode: "manual",
   },
 });
+
+function migrateStore(store: AppStore): AppStore {
+  if (store.workspace) {
+    store.workspace.sendTimeDefaults = {
+      ...DEFAULT_SEND_TIMES,
+      ...(store.workspace.sendTimeDefaults ?? {}),
+    };
+    store.workspace.channels = {
+      ...defaultChannels(),
+      ...store.workspace.channels,
+      email: {
+        ...defaultChannels().email,
+        ...store.workspace.channels?.email,
+      },
+      whatsapp: {
+        ...defaultChannels().whatsapp,
+        ...store.workspace.channels?.whatsapp,
+      },
+      linkedin: {
+        ...defaultChannels().linkedin,
+        ...store.workspace.channels?.linkedin,
+      },
+    };
+  }
+  store.contacts = (store.contacts ?? []).map((c) => ({
+    ...c,
+    relationType: c.relationType ?? "ami",
+    preferredChannels: c.preferredChannels?.length
+      ? c.preferredChannels
+      : ["whatsapp"],
+  }));
+  return store;
+}
 
 function seedTemplates(): Template[] {
   const now = new Date().toISOString();
@@ -55,6 +90,14 @@ Que cette nouvelle année te apporte santé, projets réussis et de belles renco
       occasion: "birthday",
       channel: "whatsapp",
       body: `Hey {{prenom}} ! Joyeux anniversaire 🎉 Passe une super journée — on se tient au courant bientôt !`,
+      createdAt: now,
+    },
+    {
+      id: "tpl-bday-li",
+      name: "Anniversaire — LinkedIn",
+      occasion: "birthday",
+      channel: "linkedin",
+      body: `Joyeux anniversaire {{prenom}} ! 🎂 Passe une excellente journée — au plaisir d’échanger bientôt.`,
       createdAt: now,
     },
     {
@@ -109,15 +152,21 @@ function seedSequences(): Sequence[] {
       steps: [
         {
           id: "step-1",
-          dayOffset: -1,
-          templateId: "tpl-bday-email",
-          channel: "email",
+          dayOffset: 0,
+          templateId: "tpl-bday-wa",
+          channel: "whatsapp",
         },
         {
           id: "step-2",
           dayOffset: 0,
-          templateId: "tpl-bday-wa",
-          channel: "whatsapp",
+          templateId: "tpl-bday-email",
+          channel: "email",
+        },
+        {
+          id: "step-3",
+          dayOffset: 0,
+          templateId: "tpl-bday-li",
+          channel: "linkedin",
         },
       ],
       createdAt: now,
@@ -140,7 +189,8 @@ async function ensureStore(): Promise<AppStore> {
   await fs.mkdir(DATA_DIR, { recursive: true });
   try {
     const raw = await fs.readFile(STORE_PATH, "utf8");
-    return JSON.parse(raw) as AppStore;
+    const store = migrateStore(JSON.parse(raw) as AppStore);
+    return store;
   } catch {
     const store = emptyStore();
     await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
@@ -188,6 +238,7 @@ export async function createWorkspace(input: {
     ownerName: input.name.trim() || "Utilisateur",
     plan: "free",
     channels: defaultChannels(),
+    sendTimeDefaults: { ...DEFAULT_SEND_TIMES },
     createdAt: new Date().toISOString(),
   };
   store.workspace = workspace;
@@ -214,6 +265,36 @@ export async function updateChannels(
   pushActivity(store, "info", "Canaux mis à jour");
   await writeStore(store);
   return channels;
+}
+
+export async function updateProfile(input: {
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+  ownerLinkedIn?: string;
+  sendTimeDefaults?: SendTimeDefaults;
+}): Promise<Workspace> {
+  const store = await ensureStore();
+  if (!store.workspace) throw new Error("Aucun espace de travail");
+  if (input.ownerName !== undefined) store.workspace.ownerName = input.ownerName;
+  if (input.ownerEmail !== undefined)
+    store.workspace.ownerEmail = input.ownerEmail.trim().toLowerCase();
+  if (input.ownerPhone !== undefined) {
+    store.workspace.ownerPhone = input.ownerPhone;
+    store.workspace.channels.whatsapp.ownerPhone = input.ownerPhone;
+    store.workspace.channels.whatsapp.enabled = true;
+  }
+  if (input.ownerLinkedIn !== undefined) {
+    store.workspace.ownerLinkedIn = input.ownerLinkedIn;
+    store.workspace.channels.linkedin.ownerProfileUrl = input.ownerLinkedIn;
+    store.workspace.channels.linkedin.enabled = true;
+  }
+  if (input.sendTimeDefaults) {
+    store.workspace.sendTimeDefaults = input.sendTimeDefaults;
+  }
+  pushActivity(store, "info", "Profil & horaires mis à jour");
+  await writeStore(store);
+  return store.workspace;
 }
 
 export async function listContacts(): Promise<Contact[]> {

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { Channel, Contact } from "@/lib/types";
+import type { Channel, Contact, RelationType } from "@/lib/types";
+import { RELATION_LABELS } from "@/lib/types";
 
 const emptyForm = {
   name: "",
@@ -15,7 +16,9 @@ const emptyForm = {
   company: "",
   birthday: "",
   notes: "",
-  preferredChannels: ["email"] as Channel[],
+  relationType: "ami" as RelationType,
+  sendTime: "",
+  preferredChannels: ["whatsapp"] as Channel[],
 };
 
 export default function ContactsPage() {
@@ -73,8 +76,8 @@ export default function ContactsPage() {
       <div>
         <h1 className="font-display text-3xl font-semibold">Contacts</h1>
         <p className="mt-1 text-sm text-[#5a6b63]">
-          Free : 5 contacts (famille). Pro : 500. Ajoutez date d’anniversaire
-          pour déclencher les séquences.
+          Type de relation + heure d’envoi. Le téléphone = WhatsApp du{" "}
+          <strong>destinataire</strong> (pas le vôtre).
         </p>
       </div>
 
@@ -93,7 +96,7 @@ export default function ContactsPage() {
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Sophie Dupont"
+              placeholder="Guillaume Courcelaud"
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -103,15 +106,14 @@ export default function ContactsPage() {
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="sophie@client.fr"
               />
             </div>
             <div className="space-y-2">
-              <Label>Téléphone (WhatsApp)</Label>
+              <Label>WhatsApp du contact</Label>
               <Input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+33612345678"
+                placeholder="06 XX XX XX XX"
               />
             </div>
           </div>
@@ -132,16 +134,42 @@ export default function ContactsPage() {
               />
             </div>
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Type de relation</Label>
+              <select
+                className="h-9 w-full rounded-lg border border-[#d5e0da] px-3 text-sm"
+                value={form.relationType}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    relationType: e.target.value as RelationType,
+                  })
+                }
+              >
+                <option value="ami">Ami</option>
+                <option value="famille">Famille</option>
+                <option value="travail">Travail</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Heure d’envoi (optionnel)</Label>
+              <Input
+                type="time"
+                value={form.sendTime}
+                onChange={(e) => setForm({ ...form, sendTime: e.target.value })}
+              />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label>LinkedIn URL</Label>
             <Input
               value={form.linkedinUrl}
               onChange={(e) => setForm({ ...form, linkedinUrl: e.target.value })}
-              placeholder="https://linkedin.com/in/..."
             />
           </div>
           <div className="space-y-2">
-            <Label>Notes</Label>
+            <Label>Message perso (ex. Bon anniv bb)</Label>
             <Textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -149,7 +177,7 @@ export default function ContactsPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Canaux préférés</Label>
+            <Label>Canaux</Label>
             <div className="flex flex-wrap gap-2">
               {(["email", "whatsapp", "linkedin"] as Channel[]).map((c) => (
                 <button
@@ -180,8 +208,7 @@ export default function ContactsPage() {
         <div className="space-y-3">
           {contacts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#d5e0da] bg-white p-8 text-sm text-[#5a6b63]">
-              Aucun contact. Ajoutez un membre de votre famille pour tester le
-              plan Free.
+              Aucun contact.
             </div>
           ) : (
             contacts.map((c) => (
@@ -193,12 +220,20 @@ export default function ContactsPage() {
                   <div>
                     <p className="font-medium">{c.name}</p>
                     <p className="text-xs text-[#5a6b63]">
+                      {RELATION_LABELS[c.relationType ?? "ami"]}
+                      {c.sendTime ? ` · ${c.sendTime}` : ""}
+                      {" · "}
                       {[c.email, c.phone, c.company].filter(Boolean).join(" · ") ||
                         "Pas de coordonnées"}
                     </p>
                     {c.birthday && (
                       <p className="mt-1 text-xs text-[#2a9d6e]">
                         Anniversaire : {c.birthday}
+                      </p>
+                    )}
+                    {c.notes && (
+                      <p className="mt-1 text-xs italic text-[#5a6b63]">
+                        « {c.notes} »
                       </p>
                     )}
                   </div>

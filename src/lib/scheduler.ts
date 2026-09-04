@@ -1,9 +1,5 @@
 import { randomUUID } from "crypto";
-import {
-  addMessages,
-  getStore,
-  listMessages,
-} from "./store";
+import { addMessages, getStore, listMessages } from "./store";
 import {
   buildSequenceMessages,
   fixedOccasionDate,
@@ -37,22 +33,31 @@ export async function scheduleUpcoming(): Promise<{
     for (const sequence of activeSequences) {
       let eventDate: Date | null = null;
       if (sequence.occasion === "birthday" && contact.birthday) {
-        eventDate = nextBirthdayDate(contact.birthday);
+        eventDate = nextBirthdayDate(
+          contact.birthday,
+          contact,
+          store.workspace
+        );
       } else if (
         sequence.occasion === "christmas" ||
         sequence.occasion === "newyear"
       ) {
-        eventDate = fixedOccasionDate(sequence.occasion);
-        if (eventDate && eventDate.getTime() < Date.now()) {
+        eventDate = fixedOccasionDate(
+          sequence.occasion,
+          contact,
+          store.workspace
+        );
+        if (eventDate && eventDate.getTime() < Date.now() - 86_400_000) {
           eventDate = fixedOccasionDate(
             sequence.occasion,
+            contact,
+            store.workspace,
             new Date().getFullYear() + 1
           );
         }
       }
 
       if (!eventDate) continue;
-      // only schedule if event within 60 days
       const daysAhead =
         (eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
       if (daysAhead > 60) continue;
@@ -81,7 +86,7 @@ export async function scheduleUpcoming(): Promise<{
   return { created: created.length, messages: created };
 }
 
-/** Envoie tous les messages dus (ordinateur éteint OK si cron cloud) */
+/** Prépare / envoie tous les messages dus */
 export async function processDueMessages(): Promise<{
   processed: number;
   results: Awaited<ReturnType<typeof dispatchMessage>>[];
@@ -117,6 +122,7 @@ export async function scheduleOneOff(input: {
   contactId: string;
   templateId: string;
   scheduledAt: string;
+  bodyOverride?: string;
 }): Promise<ScheduledMessage> {
   const store = await getStore();
   if (!store.workspace) throw new Error("Aucun espace");
@@ -135,11 +141,66 @@ export async function scheduleOneOff(input: {
     subject: template.subject
       ? renderTemplate(template.subject, vars)
       : undefined,
-    body: renderTemplate(template.body, vars),
+    body: input.bodyOverride?.trim()
+      ? input.bodyOverride.trim()
+      : renderTemplate(template.body, vars),
     scheduledAt: input.scheduledAt,
     status: "scheduled",
     createdAt: new Date().toISOString(),
   };
   await addMessages([message]);
   return message;
+}
+
+/** Crée + traite immédiatement un message pour un contact */
+export async function sendNow(input: {
+  contactId: string;
+  channel: "email" | "whatsapp" | "linkedin";
+  body?: string;
+  subject?: string;
+}): Promise<{
+  message: ScheduledMessage;
+  result: Awaited<ReturnType<typeof dispatchMessage>>;
+}> {
+  const store = await getStore();
+  if (!store.workspace) throw new Error("Aucun espace");
+  const contact = store.contacts.find((c) => c.id === input.contactId);
+  if (!contact) throw new Error("Contact introuvable");
+
+  const { renderTemplate, contactVars } = await import("./messages");
+  const vars = contactVars(contact, store.workspace);
+  const template =
+    store.templates.find(
+      (t) => t.channel === input.channel && t.occasion === "birthday"
+    ) || store.templates.find((t) => t.channel === input.channel);
+
+  const body =
+    input.body?.trim() ||
+    (input.channel === "whatsapp" && contact.notes?.trim()
+      ? contact.notes.trim()
+      : null) ||
+    (template
+      ? renderTemplate(template.body, vars)
+      : `Joyeux anniversaire ${vars.prenom} !`);
+
+  const subject =
+    input.subject ||
+    (template?.subject ? renderTemplate(template.subject, vars) : undefined);
+
+  const message: ScheduledMessage = {
+    id: randomUUID(),
+    contactId: contact.id,
+    templateId: template?.id,
+    channel: input.channel,
+    occasion: "birthday",
+    subject,
+    body,
+    scheduledAt: new Date().toISOString(),
+    status: "scheduled",
+    createdAt: new Date().toISOString(),
+  };
+  await addMessages([message]);
+  const result = await dispatchMessage(store.workspace, message, contact);
+  const updated = (await listMessages()).find((m) => m.id === message.id)!;
+  return { message: updated, result };
 }
