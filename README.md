@@ -46,20 +46,22 @@ Base locale : fichier `data/nevermiss.db`.
 
 ---
 
-## Cron (PC éteint)
+## Cron (PC éteint, envoi à l’heure)
 
-- Vercel Hobby : 1×/jour (~9h Paris)
-- **GitHub Actions** : chaque heure → `.github/workflows/nevermiss-cron.yml`
+Vercel Hobby = **1×/jour** seulement. Pour que **18h** marche vraiment :
 
-Dans le repo GitHub → **Settings → Secrets → Actions**, ajoute :
-- `CRON_SECRET` = le même que sur Vercel
-- `APP_URL` = `https://nevermiss-fawn.vercel.app` (ou ton domaine)
+1. Va sur [cron-job.org](https://cron-job.org) (gratuit) → Create cronjob
+2. URL : `https://nevermiss-fawn.vercel.app/api/cron`
+3. Schedule : **every hour** (ou every 15 min)
+4. Header : `Authorization` = `Bearer TON_CRON_SECRET` (le même que sur Vercel)
+5. Active le job
 
-Les heures de contact (`18:00`) sont en **Europe/Paris**.
+Les heures contact (`18:00`) = **Europe/Paris**.
 
 ### Email réel
 
-Dans **Canaux**, passe Email en **SMTP** (pas Démo) sinon l’envoi est simulé.
+**Canaux** → Email en **SMTP** (pas Démo), sinon c’est simulé.  
+WhatsApp = token Meta Cloud API. LinkedIn = brouillon seulement.
 
 - **Free** — 0 € · 5 contacts · email  
 - **Pro** — 20 €/mois · 500 contacts · WhatsApp API  

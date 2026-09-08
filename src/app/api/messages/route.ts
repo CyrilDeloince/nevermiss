@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { and, eq, inArray } from "drizzle-orm";
 import { getSessionUser } from "@/lib/db/auth";
+import { getDb } from "@/lib/db/client";
+import { messages } from "@/lib/db/schema";
 import { listMessages } from "@/lib/db/repo";
 import {
   processDueForUser,
@@ -49,6 +52,18 @@ export async function POST(req: Request) {
         })
         .parse(body);
       return NextResponse.json(await scheduleOneOff(user, parsed));
+    }
+    if (body.action === "clear-non-scheduled") {
+      const db = getDb();
+      await db
+        .delete(messages)
+        .where(
+          and(
+            eq(messages.userId, user.id),
+            inArray(messages.status, ["sent", "failed", "ready", "skipped"])
+          )
+        );
+      return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
   } catch (e) {

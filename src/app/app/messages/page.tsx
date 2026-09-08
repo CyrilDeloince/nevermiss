@@ -67,6 +67,18 @@ export default function MessagesPage() {
     setBusy(false);
   }
 
+  async function clearDone() {
+    setBusy(true);
+    await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "clear-non-scheduled" }),
+    });
+    setFlash("Anciens envois / échecs nettoyés — tu peux reprogrammer.");
+    await load();
+    setBusy(false);
+  }
+
   async function sendNow(
     contactIdToSend: string,
     channel: "email" | "whatsapp" | "linkedin"
@@ -117,8 +129,9 @@ export default function MessagesPage() {
       <div>
         <h1 className="font-display text-3xl font-semibold">File d’envoi</h1>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          Planifiez ici. Le cron cloud envoie sans ouvrir WhatsApp ni voler le
-          focus — même PC / téléphone ailleurs.
+          Planifiez ici (heures = <strong>Paris</strong>). Un cron GitHub tourne
+          chaque heure — même PC éteint. Sans SMTP / WhatsApp Cloud API, l’envoi
+          réel ne part pas.
         </p>
       </div>
 
@@ -142,6 +155,13 @@ export default function MessagesPage() {
           variant="outline"
         >
           Traiter les dus (background)
+        </Button>
+        <Button
+          onClick={() => void clearDone()}
+          disabled={busy}
+          variant="ghost"
+        >
+          Nettoyer envoyés / échecs
         </Button>
       </div>
 
