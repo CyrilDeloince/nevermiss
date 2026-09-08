@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { and, eq, lte } from "drizzle-orm";
-import { addDays, parseISO, setYear } from "date-fns";
+import { addDays } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { getDb, ensureSchema } from "./db/client";
 import { contacts, messages, sequences, templates, users } from "./db/schema";
 import { addActivity, parseChannels } from "./db/repo";
@@ -9,12 +10,8 @@ import { renderTemplate } from "./template-vars";
 import type { SessionUser } from "./db/auth";
 import type { Channel, SequenceStep } from "./types";
 
-function applyTime(date: Date, hhmm: string): Date {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(date);
-  d.setHours(h || 9, m || 0, 0, 0);
-  return d;
-}
+/** Heures d’envoi = heure de Paris (pas UTC serveur Vercel) */
+export const SCHEDULE_TZ = process.env.SCHEDULE_TZ || "Europe/Paris";
 
 function resolveSendTime(
   contact: { relationType: string; sendTime?: string | null },
@@ -26,25 +23,57 @@ function resolveSendTime(
   return user.sendTimeAmi;
 }
 
-function nextBirthday(
+/** Interprète YYYY-MM-DD + HH:mm comme heure Europe/Paris → Date UTC */
+export function atParisLocal(ymd: string, hhmm: string): Date {
+  const [hRaw, mRaw] = hhmm.split(":");
+  const h = String(Number(hRaw) || 9).padStart(2, "0");
+  const m = String(Number(mRaw) || 0).padStart(2, "0");
+  return fromZonedTime(`${ymd}T${h}:${m}:00`, SCHEDULE_TZ);
+}
+
+function parisYmd(d = new Date()): string {
+  return formatInTimeZone(d, SCHEDULE_TZ, "yyyy-MM-dd");
+}
+
+function parisYear(d = new Date()): number {
+  return Number(formatInTimeZone(d, SCHEDULE_TZ, "yyyy"));
+}
+
+/**
+ * Prochain créneau d’anniversaire à l’heure choisie (Paris).
+ * Si l’heure d’aujourd’hui est passée de < 12 h → catch-up immédiat.
+ * Si passée de > 12 h → année suivante.
+ */
+export function nextBirthday(
   birthday: string,
   hhmm: string,
   from = new Date()
 ): Date | null {
   try {
-    const parsed = parseISO(birthday);
-    let next = setYear(parsed, from.getFullYear());
-    next = applyTime(next, hhmm);
-    const start = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-    const day = new Date(next.getFullYear(), next.getMonth(), next.getDate());
-    if (day < start) {
-      next = setYear(parsed, from.getFullYear() + 1);
-      next = applyTime(next, hhmm);
+    const parts = birthday.slice(0, 10).split("-");
+    if (parts.length !== 3) return null;
+    const month = parts[1];
+    const day = parts[2];
+    const year = parisYear(from);
+    const ymd = `${year}-${month}-${day}`;
+    let when = atParisLocal(ymd, hhmm);
+    const ageMs = from.getTime() - when.getTime();
+
+    if (ageMs > 12 * 60 * 60 * 1000) {
+      when = atParisLocal(`${year + 1}-${month}-${day}`, hhmm);
+    } else if (ageMs > 60_000) {
+      // Raté de moins de 12 h : envoi dans ~15 s
+      when = new Date(from.getTime() + 15_000);
     }
-    return next;
+    return when;
   } catch {
     return null;
   }
+}
+
+function applyTimeOnSameParisDay(date: Date, hhmm: string): Date {
+  const ymd = parisYmd(date);
+  return atParisLocal(ymd, hhmm);
 }
 
 function mapUser(row: typeof users.$inferSelect): SessionUser {
@@ -98,10 +127,16 @@ export async function scheduleUpcomingForUser(userId: string) {
     .where(eq(messages.userId, userId));
 
   const keys = new Set(
-    existing.map(
-      (m) =>
-        `${m.contactId}|${m.sequenceId}|${m.scheduledAt.slice(0, 10)}|${m.channel}`
-    )
+    existing
+      .filter((m) => m.status === "scheduled" || m.status === "sent")
+      .map((m) => {
+      const day = formatInTimeZone(
+        new Date(m.scheduledAt),
+        SCHEDULE_TZ,
+        "yyyy-MM-dd"
+      );
+      return `${m.contactId}|${m.sequenceId}|${day}|${m.channel}`;
+    })
   );
 
   let created = 0;
@@ -125,7 +160,7 @@ export async function scheduleUpcomingForUser(userId: string) {
         nom: contact.name,
         entreprise: contact.company ?? "",
         signature: user.name,
-        annee: String(new Date().getFullYear()),
+        annee: formatInTimeZone(new Date(), SCHEDULE_TZ, "yyyy"),
       };
 
       for (const step of steps) {
@@ -133,10 +168,13 @@ export async function scheduleUpcomingForUser(userId: string) {
         const tpl = tplRows.find((t) => t.id === step.templateId);
         if (!tpl) continue;
 
-        let when = addDays(eventDate, step.dayOffset);
-        when = applyTime(when, hhmm);
+        let when =
+          step.dayOffset === 0
+            ? eventDate
+            : applyTimeOnSameParisDay(addDays(eventDate, step.dayOffset), hhmm);
+
         if (when.getTime() < Date.now() - 60_000) {
-          if (step.dayOffset === 0) when = new Date(Date.now() + 5_000);
+          if (step.dayOffset === 0) when = new Date(Date.now() + 15_000);
           else continue;
         }
 
@@ -150,7 +188,8 @@ export async function scheduleUpcomingForUser(userId: string) {
           body = contact.notes.trim();
         }
 
-        const key = `${contact.id}|${seq.id}|${when.toISOString().slice(0, 10)}|${step.channel}`;
+        const keyDay = formatInTimeZone(when, SCHEDULE_TZ, "yyyy-MM-dd");
+        const key = `${contact.id}|${seq.id}|${keyDay}|${step.channel}`;
         if (keys.has(key)) continue;
         keys.add(key);
 

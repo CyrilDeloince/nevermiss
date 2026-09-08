@@ -46,21 +46,20 @@ Base locale : fichier `data/nevermiss.db`.
 
 ---
 
-## Production (Vercel + Turso)
+## Cron (PC éteint)
 
-Sur Vercel le disque n’est pas persistant. Ajoutez :
+- Vercel Hobby : 1×/jour (~9h Paris)
+- **GitHub Actions** : chaque heure → `.github/workflows/nevermiss-cron.yml`
 
-```
-TURSO_DATABASE_URL=libsql://...
-TURSO_AUTH_TOKEN=...
-CRON_SECRET=...
-```
+Dans le repo GitHub → **Settings → Secrets → Actions**, ajoute :
+- `CRON_SECRET` = le même que sur Vercel
+- `APP_URL` = `https://nevermiss-fawn.vercel.app` (ou ton domaine)
 
-Puis branchez le repo sur Vercel. Cron quotidien : `vercel.json` → `/api/cron`.
+Les heures de contact (`18:00`) sont en **Europe/Paris**.
 
----
+### Email réel
 
-## Tarifs
+Dans **Canaux**, passe Email en **SMTP** (pas Démo) sinon l’envoi est simulé.
 
 - **Free** — 0 € · 5 contacts · email  
 - **Pro** — 20 €/mois · 500 contacts · WhatsApp API  

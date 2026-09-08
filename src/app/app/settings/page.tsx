@@ -119,7 +119,7 @@ export default function SettingsPage() {
         <h1 className="font-display text-3xl font-semibold">Plan & réglages</h1>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">
           Changez de plan à la volée pour la démo sales. Compte :{" "}
-          {workspace.ownerEmail}
+          {workspace.ownerEmail}. Horaires = <strong>Europe/Paris</strong>.
         </p>
       </div>
 
