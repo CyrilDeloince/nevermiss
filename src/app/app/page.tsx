@@ -3,24 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { AppStore } from "@/lib/types";
 import { PLAN_LIMITS } from "@/lib/types";
 import { formatFrDate } from "@/lib/messages-client";
 import { cn } from "@/lib/utils";
 
+type StorePayload = AppStore & {
+  authenticated?: boolean;
+  user?: { name: string; email: string; plan: string; role: string };
+};
+
 export default function AppHomePage() {
-  const [store, setStore] = useState<AppStore | null>(null);
+  const [store, setStore] = useState<StorePayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState("alex@agence.fr");
-  const [name, setName] = useState("Alex Martin");
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/store");
-    const data = (await res.json()) as AppStore;
+    const data = (await res.json()) as StorePayload;
     setStore(data);
     setLoading(false);
   }, []);
@@ -28,19 +29,6 @@ export default function AppHomePage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
-
-  async function bootstrap() {
-    setBusy(true);
-    setFlash(null);
-    await fetch("/api/store", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "bootstrap", email, name }),
-    });
-    await refresh();
-    setBusy(false);
-    setFlash("Espace créé — plan Free activé. Ajoutez un contact famille pour tester.");
-  }
 
   async function runScheduler() {
     setBusy(true);
@@ -58,202 +46,146 @@ export default function AppHomePage() {
     await refresh();
     setBusy(false);
     setFlash(
-      `Planifiés : ${schedule.created} · Traités : ${process.processed}`
+      `Planifiés : ${schedule.created ?? 0} · Traités : ${process.processed ?? 0}`
     );
   }
 
   if (loading) {
-    return <p className="text-sm text-[#5a6b63]">Chargement de votre espace…</p>;
-  }
-
-  if (!store?.workspace) {
     return (
-      <div className="mx-auto max-w-lg">
-        <h1 className="font-display text-3xl font-semibold text-[#0e1512]">
-          Créer votre espace NeverMiss
-        </h1>
-        <p className="mt-2 text-[#5a6b63]">
-          Free pour tester sur votre famille. Pro à 20 €/mois quand vous passez
-          aux clients.
-        </p>
-        <div className="mt-8 space-y-4 rounded-2xl border border-[#d5e0da] bg-white p-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Votre prénom</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <Button
-            onClick={() => void bootstrap()}
-            disabled={busy}
-            className="w-full bg-[#0e1512] text-[#e8fff4] hover:bg-[#1a2822]"
-          >
-            {busy ? "Création…" : "Lancer Free"}
-          </Button>
-        </div>
-      </div>
+      <p className="text-sm text-[var(--muted-foreground)]">Chargement…</p>
     );
   }
 
-  const plan = PLAN_LIMITS[store.workspace.plan];
-  const upcoming = store.messages
-    .filter((m) => m.status === "scheduled")
+  const plan = store?.workspace?.plan ?? "free";
+  const limits = PLAN_LIMITS[plan];
+  const upcoming = (store?.messages ?? [])
+    .filter((m) => m.status === "scheduled" || m.status === "ready")
     .slice(0, 5);
-  const recent = store.activity.slice(0, 6);
+  const activity = store?.activity ?? [];
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-[#5a6b63]">
-            Bonjour {store.workspace.ownerName}
-          </p>
-          <h1 className="font-display text-3xl font-semibold text-[#0e1512]">
-            Vue d’ensemble
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            Bonjour {store?.user?.name?.split(" ")[0] ?? store?.workspace?.ownerName}
           </h1>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            Plan {limits.label} · {store?.contacts.length ?? 0}/{limits.contacts}{" "}
+            contacts · vos données restent sur votre compte.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => void runScheduler()}
-            disabled={busy}
-            className="bg-[#7cffb2] text-[#0e1512] hover:bg-[#9affc6]"
-          >
-            Lancer le moteur maintenant
-          </Button>
-          <Link
-            href="/app/contacts"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Ajouter un contact
-          </Link>
-        </div>
+        <Button
+          onClick={() => void runScheduler()}
+          disabled={busy}
+          className="bg-[var(--ink)] text-white hover:bg-[#1a2438]"
+        >
+          {busy ? "…" : "Programmer & envoyer"}
+        </Button>
       </div>
 
       {flash && (
-        <div className="rounded-xl border border-[#7cffb2]/40 bg-[#7cffb2]/15 px-4 py-3 text-sm text-[#0e1512]">
+        <p className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
           {flash}
-        </div>
+        </p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         {[
           {
-            label: "Plan",
-            value: plan.label,
-            sub: plan.price,
-          },
-          {
             label: "Contacts",
-            value: `${store.contacts.length}/${plan.contacts}`,
-            sub: "limite du plan",
+            value: String(store?.contacts.length ?? 0),
+            href: "/app/contacts",
           },
           {
-            label: "À envoyer",
+            label: "Messages planifiés",
             value: String(
-              store.messages.filter((m) => m.status === "scheduled").length
+              store?.messages.filter((m) => m.status === "scheduled").length ?? 0
             ),
-            sub: "dans la file",
+            href: "/app/messages",
           },
           {
             label: "Envoyés",
-            value: String(store.messages.filter((m) => m.status === "sent").length),
-            sub: "tous canaux",
+            value: String(
+              store?.messages.filter((m) => m.status === "sent").length ?? 0
+            ),
+            href: "/app/messages",
           },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-2xl border border-[#d5e0da] bg-white p-4"
+        ].map((s) => (
+          <Link
+            key={s.label}
+            href={s.href}
+            className="rounded-2xl border border-[var(--border)] bg-white px-5 py-4 transition hover:border-[var(--accent-strong)]/40"
           >
-            <p className="text-xs uppercase tracking-wide text-[#5a6b63]">
-              {stat.label}
+            <p className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
+              {s.label}
             </p>
-            <p className="mt-2 font-display text-2xl font-semibold">{stat.value}</p>
-            <p className="text-xs text-[#5a6b63]">{stat.sub}</p>
-          </div>
+            <p className="mt-2 font-display text-3xl font-semibold">{s.value}</p>
+          </Link>
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-[#d5e0da] bg-white p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">Prochains envois</h2>
-            <Link href="/app/messages" className="text-sm text-[#2a9d6e]">
-              Voir tout
-            </Link>
-          </div>
-          {upcoming.length === 0 ? (
-            <p className="text-sm text-[#5a6b63]">
-              Aucun message programmé. Ajoutez un contact avec anniversaire, puis
-              lancez le moteur.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {upcoming.map((m) => {
-                const contact = store.contacts.find((c) => c.id === m.contactId);
-                return (
-                  <li
-                    key={m.id}
-                    className="flex items-start justify-between gap-3 border-b border-[#e8efeb] pb-3 last:border-0"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">
-                        {contact?.name ?? "Contact"} · {m.channel}
-                      </p>
-                      <p className="text-xs text-[#5a6b63] line-clamp-1">
-                        {m.subject ?? m.body}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-xs text-[#5a6b63]">
-                      {formatFrDate(m.scheduledAt)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-[#d5e0da] bg-white p-5">
-          <h2 className="mb-4 font-display text-lg font-semibold">Activité</h2>
-          {recent.length === 0 ? (
-            <p className="text-sm text-[#5a6b63]">Pas encore d’activité.</p>
-          ) : (
-            <ul className="space-y-3">
-              {recent.map((a) => (
-                <li key={a.id} className="text-sm">
-                  <p className="text-[#0e1512]">{a.message}</p>
-                  <p className="text-xs text-[#5a6b63]">
-                    {formatFrDate(a.createdAt)}
+      <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold">Prochains envois</h2>
+          <Link
+            href="/app/messages"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
+            Tout voir
+          </Link>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Aucun message planifié. Ajoutez un contact avec date d’anniversaire,
+            puis cliquez « Programmer & envoyer ».
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {upcoming.map((m) => (
+              <li
+                key={m.id}
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-3 last:border-0 last:pb-0"
+              >
+                <div>
+                  <p className="text-sm font-medium">{m.channel} · {m.status}</p>
+                  <p className="text-xs text-[var(--muted-foreground)] line-clamp-1">
+                    {m.body}
                   </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      <section className="rounded-2xl border border-dashed border-[#2a9d6e] bg-[#7cffb2]/10 p-5">
-        <h2 className="font-display text-lg font-semibold">PC éteint ?</h2>
-        <p className="mt-2 text-sm text-[#5a6b63]">
-          Appelez{" "}
-          <code className="rounded bg-white px-1.5 py-0.5 text-xs">
-            GET /api/cron
-          </code>{" "}
-          toutes les heures via cron-job.org, Vercel Cron ou Railway. Les
-          messages dus partent sans que votre ordinateur soit allumé.
-        </p>
+                </div>
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {formatFrDate(m.scheduledAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
+
+      <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
+        <h2 className="mb-3 font-display text-lg font-semibold">Activité</h2>
+        {activity.length === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">Rien pour l’instant.</p>
+        ) : (
+          <ul className="space-y-2">
+            {activity.slice(0, 8).map((a) => (
+              <li key={a.id} className="text-sm text-[var(--muted-foreground)]">
+                <span className="text-[var(--foreground)]">{a.message}</span>
+                <span className="ml-2 text-xs">{formatFrDate(a.createdAt)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <p className="text-xs leading-relaxed text-[var(--muted-foreground)]">
+        Confidentialité : chaque compte ne voit que ses propres contacts. Email
+        SMTP et WhatsApp Business API partent en arrière-plan, sans ouvrir
+        d’onglet.{" "}
+        <Link href="/app/channels" className="underline underline-offset-2">
+          Configurer les canaux
+        </Link>
+      </p>
     </div>
   );
 }

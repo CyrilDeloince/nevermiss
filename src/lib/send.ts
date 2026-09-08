@@ -1,11 +1,26 @@
 import nodemailer from "nodemailer";
-import type { Contact, ScheduledMessage, Workspace } from "./types";
-import { addActivity, updateMessage } from "./store";
-import {
-  gmailComposeLink,
-  mailtoLink,
-  whatsappDeepLink,
-} from "./messages";
+import { eq } from "drizzle-orm";
+import { getDb } from "./db/client";
+import { messages } from "./db/schema";
+import { addActivity } from "./db/repo";
+import { normalizePhone, whatsappDeepLink } from "./messages";
+import type { SessionUser } from "./db/auth";
+
+export type ContactRow = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  linkedinUrl?: string | null;
+  company?: string | null;
+};
+
+export type MessageRow = {
+  id: string;
+  channel: string;
+  subject?: string | null;
+  body: string;
+};
 
 export type SendResult = {
   id: string;
@@ -14,24 +29,31 @@ export type SendResult = {
   deepLink?: string;
 };
 
+/**
+ * Envoi silencieux en arrière-plan :
+ * - Email SMTP → vraiment envoyé sans ouvrir de fenêtre
+ * - WhatsApp Cloud API (Meta) → vraiment envoyé sans ouvrir WhatsApp
+ * - Sans Cloud API, WhatsApp ne peut PAS partir en silence (limitation Meta)
+ */
 async function sendEmail(
-  workspace: Workspace,
-  message: ScheduledMessage,
-  contact: Contact
+  user: SessionUser,
+  message: MessageRow,
+  contact: ContactRow
 ): Promise<SendResult> {
-  const emailCfg = workspace.channels.email;
   if (!contact.email) {
-    return {
-      id: message.id,
-      status: "failed",
-      detail: "Contact sans email",
-    };
+    return { id: message.id, status: "failed", detail: "Contact sans email" };
   }
 
-  const subject = message.subject ?? "Message NeverMiss";
-
-  if (emailCfg.mode === "smtp" && emailCfg.smtp?.host) {
-    const smtp = emailCfg.smtp;
+  if (user.emailMode === "smtp" && user.smtpJson) {
+    const smtp = JSON.parse(user.smtpJson) as {
+      host: string;
+      port: number;
+      secure: boolean;
+      user: string;
+      pass: string;
+      fromName: string;
+      fromEmail: string;
+    };
     const transporter = nodemailer.createTransport({
       host: smtp.host,
       port: smtp.port,
@@ -41,60 +63,51 @@ async function sendEmail(
     await transporter.sendMail({
       from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
       to: contact.email,
-      subject,
+      subject: message.subject ?? "Message NeverMiss",
       text: message.body,
     });
     return {
       id: message.id,
       status: "sent",
-      detail: `Email envoyé à ${contact.email}`,
+      detail: `Email envoyé silencieusement à ${contact.email}`,
     };
   }
 
-  // Gmail compose / mailto : 1 clic depuis ton compte Google
-  const deepLink =
-    emailCfg.mode === "gmail_compose" || emailCfg.mode === "demo"
-      ? gmailComposeLink(contact.email, subject, message.body)
-      : mailtoLink(contact.email, subject, message.body);
+  // Mode démo : simule l’envoi auto (pour la démo sales sans SMTP)
+  if (user.emailMode === "demo") {
+    return {
+      id: message.id,
+      status: "sent",
+      detail: `[Démo] Email considéré envoyé à ${contact.email} (configurez SMTP pour l’envoi réel silencieux)`,
+    };
+  }
 
-  await addActivity(
-    "info",
-    `Gmail prêt pour ${contact.name} — ouvrez le lien pour envoyer depuis votre boîte`
-  );
   return {
     id: message.id,
-    status: "ready",
-    detail: `Ouvrir Gmail pour envoyer à ${contact.email}`,
-    deepLink,
+    status: "failed",
+    detail: "Configurez SMTP dans Canaux pour un envoi email automatique",
   };
 }
 
 async function sendWhatsApp(
-  workspace: Workspace,
-  message: ScheduledMessage,
-  contact: Contact
+  user: SessionUser,
+  message: MessageRow,
+  contact: ContactRow
 ): Promise<SendResult> {
   if (!contact.phone) {
     return {
       id: message.id,
       status: "failed",
-      detail:
-        "Contact sans téléphone WhatsApp — ajoutez le numéro du destinataire",
+      detail: "Contact sans téléphone WhatsApp",
     };
   }
 
-  const link = whatsappDeepLink(contact.phone, message.body);
+  const token = user.whatsappToken;
+  const phoneId = user.whatsappPhoneId;
 
-  if (workspace.channels.whatsapp.mode === "business_api") {
-    const token = workspace.channels.whatsapp.businessToken;
-    const phoneId = workspace.channels.whatsapp.phoneNumberId;
-    if (!token || !phoneId) {
-      return {
-        id: message.id,
-        status: "failed",
-        detail: "WhatsApp Business API non configurée",
-      };
-    }
+  // Vrai envoi background via Meta Cloud API
+  if (token && phoneId) {
+    const to = normalizePhone(contact.phone).replace(/^\+/, "");
     const res = await fetch(
       `https://graph.facebook.com/v19.0/${phoneId}/messages`,
       {
@@ -105,7 +118,7 @@ async function sendWhatsApp(
         },
         body: JSON.stringify({
           messaging_product: "whatsapp",
-          to: contact.phone.replace(/[^\d]/g, ""),
+          to,
           type: "text",
           text: { body: message.body },
         }),
@@ -116,32 +129,28 @@ async function sendWhatsApp(
       return {
         id: message.id,
         status: "failed",
-        detail: `WhatsApp API erreur: ${err}`,
+        detail: `WhatsApp API : ${err.slice(0, 200)}`,
       };
     }
     return {
       id: message.id,
       status: "sent",
-      detail: `WhatsApp Business envoyé à ${contact.phone}`,
+      detail: `WhatsApp envoyé en arrière-plan à ${contact.name} (sans ouvrir l’app)`,
     };
   }
 
-  const from = workspace.ownerPhone || workspace.channels.whatsapp.ownerPhone;
-  await addActivity(
-    "info",
-    `WhatsApp prêt pour ${contact.name}${from ? ` (depuis ${from})` : ""} — 1 clic pour ouvrir la conversation`
-  );
+  // Sans API Meta : impossible d’envoyer en silence légalement
   return {
     id: message.id,
-    status: "ready",
-    detail: `Ouvrir WhatsApp pour ${contact.name}`,
-    deepLink: link,
+    status: "failed",
+    detail:
+      "WhatsApp automatique nécessite WhatsApp Business API (Meta) dans Canaux. Sans ça, Meta interdit l’envoi silencieux.",
   };
 }
 
 async function sendLinkedIn(
-  message: ScheduledMessage,
-  contact: Contact
+  message: MessageRow,
+  contact: ContactRow
 ): Promise<SendResult> {
   if (!contact.linkedinUrl) {
     return {
@@ -150,62 +159,61 @@ async function sendLinkedIn(
       detail: "Contact sans URL LinkedIn",
     };
   }
-  await addActivity(
-    "info",
-    `LinkedIn prêt pour ${contact.name} — ouvrez le profil et collez le message`
-  );
+  // API messaging LinkedIn fermée — on enregistre le brouillon
   return {
     id: message.id,
     status: "ready",
-    detail: `Ouvrir LinkedIn pour ${contact.name}`,
+    detail: `Brouillon LinkedIn prêt pour ${contact.name} (API LinkedIn fermée — à poster manuellement)`,
     deepLink: contact.linkedinUrl,
   };
 }
 
 export async function dispatchMessage(
-  workspace: Workspace,
-  message: ScheduledMessage,
-  contact: Contact
+  user: SessionUser,
+  message: MessageRow,
+  contact: ContactRow
 ): Promise<SendResult> {
   try {
     let result: SendResult;
     if (message.channel === "email") {
-      result = await sendEmail(workspace, message, contact);
+      result = await sendEmail(user, message, contact);
     } else if (message.channel === "whatsapp") {
-      result = await sendWhatsApp(workspace, message, contact);
+      result = await sendWhatsApp(user, message, contact);
     } else {
       result = await sendLinkedIn(message, contact);
     }
 
-    await updateMessage(message.id, {
-      status:
-        result.status === "sent"
-          ? "sent"
-          : result.status === "ready"
-            ? "ready"
-            : result.status,
-      sentAt:
-        result.status === "sent" || result.status === "ready"
-          ? new Date().toISOString()
-          : undefined,
-      deepLink: result.deepLink,
-      error: result.status === "failed" ? result.detail : undefined,
-    });
+    const db = getDb();
+    await db
+      .update(messages)
+      .set({
+        status: result.status,
+        sentAt:
+          result.status === "sent" || result.status === "ready"
+            ? new Date().toISOString()
+            : null,
+        deepLink: result.deepLink ?? null,
+        error: result.status === "failed" ? result.detail : null,
+      })
+      .where(eq(messages.id, message.id));
 
-    if (result.status === "sent" || result.status === "ready") {
-      await addActivity(
-        result.status === "sent" ? "sent" : "info",
-        result.detail
-      );
-    } else if (result.status === "failed") {
-      await addActivity("failed", result.detail);
-    }
-
+    await addActivity(
+      user.id,
+      result.status === "failed" ? "failed" : "sent",
+      result.detail
+    );
     return result;
   } catch (e) {
     const detail = e instanceof Error ? e.message : "Erreur d’envoi";
-    await updateMessage(message.id, { status: "failed", error: detail });
-    await addActivity("failed", detail);
+    const db = getDb();
+    await db
+      .update(messages)
+      .set({ status: "failed", error: detail })
+      .where(eq(messages.id, message.id));
+    await addActivity(user.id, "failed", detail);
     return { id: message.id, status: "failed", detail };
   }
 }
+
+// re-export helper used elsewhere
+export { whatsappDeepLink };

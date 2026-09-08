@@ -15,7 +15,6 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false);
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [times, setTimes] = useState<SendTimeDefaults>({ ...DEFAULT_SEND_TIMES });
@@ -31,7 +30,6 @@ export default function SettingsPage() {
       } else {
         setWorkspace(data.workspace);
         setName(data.workspace.ownerName ?? "");
-        setEmail(data.workspace.ownerEmail ?? "");
         setPhone(
           data.workspace.ownerPhone ||
             data.workspace.channels?.whatsapp?.ownerPhone ||
@@ -72,11 +70,7 @@ export default function SettingsPage() {
       setError(data.error ?? "Erreur plan");
       return;
     }
-    setFlash(
-      plan === "pro"
-        ? "Plan Pro activé. WhatsApp & séquences débloqués."
-        : `Plan ${plan} activé`
-    );
+    setFlash(`Plan ${PLAN_LIMITS[plan].label} activé — idéal pour la démo.`);
     await load();
   }
 
@@ -90,7 +84,6 @@ export default function SettingsPage() {
       body: JSON.stringify({
         action: "set-profile",
         ownerName: name,
-        ownerEmail: email,
         ownerPhone: phone,
         ownerLinkedIn: linkedin,
         sendTimeDefaults: times,
@@ -102,20 +95,20 @@ export default function SettingsPage() {
       setError(data.error ?? "Erreur enregistrement");
       return;
     }
-    setFlash(
-      "Identité enregistrée — WhatsApp, email et LinkedIn sont connectés à votre profil."
-    );
+    setFlash("Identité et horaires enregistrés.");
     await load();
   }
 
   if (loading) {
-    return <p className="text-sm text-[#5a6b63]">Chargement des réglages…</p>;
+    return (
+      <p className="text-sm text-[var(--muted-foreground)]">Chargement…</p>
+    );
   }
 
   if (!workspace) {
     return (
-      <p className="text-sm text-[#5a6b63]">
-        Créez d’abord votre espace depuis la vue d’ensemble.
+      <p className="text-sm text-[var(--muted-foreground)]">
+        Connectez-vous pour accéder aux réglages.
       </p>
     );
   }
@@ -124,13 +117,14 @@ export default function SettingsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-semibold">Plan & réglages</h1>
-        <p className="mt-1 text-sm text-[#5a6b63]">
-          Votre identité d’envoi + horaires selon ami / famille / travail.
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+          Changez de plan à la volée pour la démo sales. Compte :{" "}
+          {workspace.ownerEmail}
         </p>
       </div>
 
       {flash && (
-        <div className="rounded-xl bg-[#7cffb2]/15 px-4 py-3 text-sm text-[#0e1512]">
+        <div className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
           {flash}
         </div>
       )}
@@ -140,37 +134,22 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <section className="space-y-4 rounded-2xl border border-[#d5e0da] bg-white p-5">
-        <h2 className="font-display text-lg font-semibold">
-          Mon identité (expéditeur)
-        </h2>
-        <p className="text-sm text-[#5a6b63]">
-          C’est <strong>votre</strong> WhatsApp, email et LinkedIn — pas ceux du
-          contact. Les vœux partent comme venant de vous.
-        </p>
+      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+        <h2 className="font-display text-lg font-semibold">Identité</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Votre nom</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Votre email (Gmail)</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="vous@gmail.com"
-            />
-          </div>
-          <div className="space-y-2">
             <Label>Votre WhatsApp</Label>
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="06 52 62 33 28"
+              placeholder="+33 6 …"
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label>Votre LinkedIn</Label>
             <Input
               value={linkedin}
@@ -181,14 +160,10 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-[#d5e0da] bg-white p-5">
+      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
         <h2 className="font-display text-lg font-semibold">
-          Heures d’envoi par type de relation
+          Heures d’envoi par relation
         </h2>
-        <p className="text-sm text-[#5a6b63]">
-          Un ami à 10h30, la famille à 9h, un client à 8h45 — pas le même moment.
-          Chaque contact peut aussi avoir son heure perso.
-        </p>
         <div className="grid gap-3 sm:grid-cols-3">
           {(
             [
@@ -210,9 +185,9 @@ export default function SettingsPage() {
         <Button
           onClick={() => void saveProfile()}
           disabled={busy}
-          className="bg-[#0e1512] text-[#e8fff4]"
+          className="bg-[var(--ink)] text-white"
         >
-          {busy ? "Enregistrement…" : "Enregistrer identité & horaires"}
+          {busy ? "…" : "Enregistrer"}
         </Button>
       </section>
 
@@ -225,32 +200,36 @@ export default function SettingsPage() {
               key={id}
               className={`rounded-2xl border p-5 ${
                 active
-                  ? "border-[#2a9d6e] bg-[#7cffb2]/10"
-                  : "border-[#d5e0da] bg-white"
+                  ? "border-[var(--accent-strong)] bg-[var(--accent-soft)]"
+                  : "border-[var(--border)] bg-white"
               }`}
             >
-              <p className="text-sm text-[#5a6b63]">{plan.label}</p>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                {plan.label}
+              </p>
               <p className="mt-1 font-display text-3xl font-semibold">
                 {plan.price}
               </p>
-              <p className="mt-2 text-sm text-[#5a6b63]">{plan.description}</p>
-              <ul className="mt-4 space-y-1 text-sm text-[#5a6b63]">
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                {plan.description}
+              </p>
+              <ul className="mt-4 space-y-1 text-sm text-[var(--muted-foreground)]">
                 <li>· {plan.contacts} contacts</li>
                 <li>
                   · {plan.sequences} séquence{plan.sequences > 1 ? "s" : ""}
                 </li>
-                <li>· Canaux : {plan.channels.join(", ")}</li>
+                <li>· {plan.channels.join(", ")}</li>
               </ul>
               <Button
                 className={`mt-5 w-full ${
                   active
-                    ? "bg-[#2a9d6e] text-white"
-                    : "bg-[#0e1512] text-[#e8fff4]"
+                    ? "bg-[var(--accent-strong)] text-white"
+                    : "bg-[var(--ink)] text-white"
                 }`}
                 disabled={busy || active}
                 onClick={() => void setPlan(id)}
               >
-                {active ? "Plan actuel" : `Activer ${plan.label}`}
+                {active ? "Plan actuel" : `Essayer ${plan.label}`}
               </Button>
             </div>
           );

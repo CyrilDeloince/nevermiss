@@ -20,8 +20,8 @@ export default function SequencesPage() {
       fetch("/api/sequences").then((r) => r.json()),
       fetch("/api/templates").then((r) => r.json()),
     ]);
-    setSequences(seqs);
-    setTemplates(tpls);
+    if (Array.isArray(seqs)) setSequences(seqs);
+    if (Array.isArray(tpls)) setTemplates(tpls);
   }, []);
 
   useEffect(() => {

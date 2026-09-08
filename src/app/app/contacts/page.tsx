@@ -29,7 +29,8 @@ export default function ContactsPage() {
 
   const load = useCallback(async () => {
     const res = await fetch("/api/contacts");
-    setContacts(await res.json());
+    const data = await res.json();
+    if (Array.isArray(data)) setContacts(data);
   }, []);
 
   useEffect(() => {
@@ -75,7 +76,7 @@ export default function ContactsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-semibold">Contacts</h1>
-        <p className="mt-1 text-sm text-[#5a6b63]">
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
           Type de relation + heure d’envoi. Le téléphone = WhatsApp du{" "}
           <strong>destinataire</strong> (pas le vôtre).
         </p>
@@ -83,7 +84,7 @@ export default function ContactsPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
         <form
-          className="space-y-3 rounded-2xl border border-[#d5e0da] bg-white p-5"
+          className="space-y-3 rounded-2xl border border-[var(--border)] bg-white p-5"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
@@ -138,7 +139,7 @@ export default function ContactsPage() {
             <div className="space-y-2">
               <Label>Type de relation</Label>
               <select
-                className="h-9 w-full rounded-lg border border-[#d5e0da] px-3 text-sm"
+                className="h-9 w-full rounded-lg border border-[var(--border)] px-3 text-sm"
                 value={form.relationType}
                 onChange={(e) =>
                   setForm({
@@ -186,8 +187,8 @@ export default function ContactsPage() {
                   onClick={() => toggleChannel(c)}
                   className={`rounded-lg px-3 py-1.5 text-xs capitalize ${
                     form.preferredChannels.includes(c)
-                      ? "bg-[#0e1512] text-[#e8fff4]"
-                      : "bg-[#e8efeb] text-[#5a6b63]"
+                      ? "bg-[var(--ink)] text-white"
+                      : "bg-[var(--secondary)] text-[var(--muted-foreground)]"
                   }`}
                 >
                   {c}
@@ -199,7 +200,7 @@ export default function ContactsPage() {
           <Button
             type="submit"
             disabled={busy}
-            className="w-full bg-[#0e1512] text-[#e8fff4]"
+            className="w-full bg-[var(--ink)] text-white"
           >
             {busy ? "Enregistrement…" : "Ajouter"}
           </Button>
@@ -207,19 +208,19 @@ export default function ContactsPage() {
 
         <div className="space-y-3">
           {contacts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#d5e0da] bg-white p-8 text-sm text-[#5a6b63]">
+            <div className="rounded-2xl border border-dashed border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]">
               Aucun contact.
             </div>
           ) : (
             contacts.map((c) => (
               <div
                 key={c.id}
-                className="rounded-2xl border border-[#d5e0da] bg-white p-4"
+                className="rounded-2xl border border-[var(--border)] bg-white p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-medium">{c.name}</p>
-                    <p className="text-xs text-[#5a6b63]">
+                    <p className="text-xs text-[var(--muted-foreground)]">
                       {RELATION_LABELS[c.relationType ?? "ami"]}
                       {c.sendTime ? ` · ${c.sendTime}` : ""}
                       {" · "}
@@ -227,12 +228,12 @@ export default function ContactsPage() {
                         "Pas de coordonnées"}
                     </p>
                     {c.birthday && (
-                      <p className="mt-1 text-xs text-[#2a9d6e]">
+                      <p className="mt-1 text-xs text-[var(--accent-strong)]">
                         Anniversaire : {c.birthday}
                       </p>
                     )}
                     {c.notes && (
-                      <p className="mt-1 text-xs italic text-[#5a6b63]">
+                      <p className="mt-1 text-xs italic text-[var(--muted-foreground)]">
                         « {c.notes} »
                       </p>
                     )}

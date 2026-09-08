@@ -1,49 +1,54 @@
 import { NextResponse } from "next/server";
-import { listMessages } from "@/lib/store";
+import { getSessionUser } from "@/lib/db/auth";
+import { listMessages } from "@/lib/db/repo";
 import {
-  processDueMessages,
+  processDueForUser,
   scheduleOneOff,
-  scheduleUpcoming,
-  sendNow,
+  scheduleUpcomingForUser,
+  sendNowForUser,
 } from "@/lib/scheduler";
 import { z } from "zod";
 
+export const runtime = "nodejs";
+
 export async function GET() {
-  return NextResponse.json(await listMessages());
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  return NextResponse.json(await listMessages(user.id));
 }
 
 export async function POST(req: Request) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const body = await req.json();
   try {
     if (body.action === "schedule-upcoming") {
-      const result = await scheduleUpcoming();
-      return NextResponse.json(result);
+      return NextResponse.json(await scheduleUpcomingForUser(user.id));
     }
     if (body.action === "process-due") {
-      const result = await processDueMessages();
-      return NextResponse.json(result);
+      return NextResponse.json(await processDueForUser(user.id));
     }
     if (body.action === "send-now") {
-      const schema = z.object({
-        contactId: z.string(),
-        channel: z.enum(["email", "whatsapp", "linkedin"]),
-        body: z.string().optional(),
-        subject: z.string().optional(),
-      });
-      const parsed = schema.parse(body);
-      const result = await sendNow(parsed);
-      return NextResponse.json(result);
+      const parsed = z
+        .object({
+          contactId: z.string(),
+          channel: z.enum(["email", "whatsapp", "linkedin"]),
+          body: z.string().optional(),
+          subject: z.string().optional(),
+        })
+        .parse(body);
+      return NextResponse.json(await sendNowForUser(user, parsed));
     }
     if (body.action === "one-off") {
-      const schema = z.object({
-        contactId: z.string(),
-        templateId: z.string(),
-        scheduledAt: z.string(),
-        bodyOverride: z.string().optional(),
-      });
-      const parsed = schema.parse(body);
-      const message = await scheduleOneOff(parsed);
-      return NextResponse.json(message);
+      const parsed = z
+        .object({
+          contactId: z.string(),
+          templateId: z.string(),
+          scheduledAt: z.string(),
+          bodyOverride: z.string().optional(),
+        })
+        .parse(body);
+      return NextResponse.json(await scheduleOneOff(user, parsed));
     }
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
   } catch (e) {

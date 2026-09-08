@@ -14,6 +14,7 @@ export default function ChannelsPage() {
 
   const load = useCallback(async () => {
     const res = await fetch("/api/settings").then((r) => r.json());
+    if (res.error) return;
     setWorkspace(res.workspace);
     setChannels(res.workspace?.channels ?? null);
   }, []);
@@ -37,9 +38,7 @@ export default function ChannelsPage() {
 
   if (!workspace || !channels) {
     return (
-      <p className="text-sm text-[#5a6b63]">
-        Créez d’abord votre espace depuis la vue d’ensemble.
-      </p>
+      <p className="text-sm text-[var(--muted-foreground)]">Chargement…</p>
     );
   }
 
@@ -47,33 +46,30 @@ export default function ChannelsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-semibold">Canaux</h1>
-        <p className="mt-1 text-sm text-[#5a6b63]">
-          Email fonctionne aujourd’hui. WhatsApp sans API payante via wa.me.
-          LinkedIn en brouillon (API fermée).
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+          Objectif : envoi en arrière-plan, sans ouvrir WhatsApp ni Gmail sous
+          vos yeux. SMTP + WhatsApp Cloud API (Meta).
         </p>
       </div>
 
       {flash && (
-        <div className="rounded-xl bg-[#7cffb2]/15 px-4 py-3 text-sm">{flash}</div>
+        <div className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
+          {flash}
+        </div>
       )}
 
-      <section className="space-y-4 rounded-2xl border border-[#d5e0da] bg-white p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">Email / Gmail</h2>
-          <span className="rounded-md bg-[#7cffb2]/20 px-2 py-1 text-xs text-[#0e1512]">
-            Dispo Free
-          </span>
-        </div>
-        <p className="text-sm text-[#5a6b63]">
-          Mode démo = simulation + journal d’activité. Mode SMTP = envoi réel
-          (mot de passe d’application Gmail, Brevo, Resend SMTP…).
+      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+        <h2 className="font-display text-lg font-semibold">Email (silencieux)</h2>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Mode démo = simulation pour la démo sales. Mode SMTP = vrai envoi
+          automatique (Gmail app password, Brevo, Resend…).
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Mode</Label>
             <select
-              className="h-9 w-full rounded-lg border border-[#d5e0da] px-3 text-sm"
-              value={channels.email.mode}
+              className="h-9 w-full rounded-lg border border-[var(--border)] px-3 text-sm"
+              value={channels.email.mode === "gmail_compose" ? "demo" : channels.email.mode}
               onChange={(e) =>
                 setChannels({
                   ...channels,
@@ -84,8 +80,8 @@ export default function ChannelsPage() {
                 })
               }
             >
-              <option value="demo">Démo (sans SMTP)</option>
-              <option value="smtp">SMTP réel</option>
+              <option value="demo">Démo (simulation)</option>
+              <option value="smtp">SMTP réel (background)</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -98,7 +94,7 @@ export default function ChannelsPage() {
                   email: {
                     ...channels.email,
                     smtp: {
-                      host: channels.email.smtp?.host ?? "",
+                      host: channels.email.smtp?.host ?? "smtp.gmail.com",
                       port: channels.email.smtp?.port ?? 587,
                       secure: channels.email.smtp?.secure ?? false,
                       user: channels.email.smtp?.user ?? "",
@@ -119,7 +115,7 @@ export default function ChannelsPage() {
                 ["host", "Host (smtp.gmail.com)"],
                 ["port", "Port (587)"],
                 ["user", "User"],
-                ["pass", "Password / App password"],
+                ["pass", "App password"],
                 ["fromEmail", "From email"],
               ] as const
             ).map(([key, label]) => (
@@ -128,9 +124,8 @@ export default function ChannelsPage() {
                 <Input
                   type={key === "pass" ? "password" : "text"}
                   value={String(
-                    channels.email.smtp?.[
-                      key === "port" ? "port" : key
-                    ] ?? (key === "port" ? 587 : "")
+                    channels.email.smtp?.[key === "port" ? "port" : key] ??
+                      (key === "port" ? 587 : "")
                   )}
                   onChange={(e) =>
                     setChannels({
@@ -138,7 +133,7 @@ export default function ChannelsPage() {
                       email: {
                         ...channels.email,
                         smtp: {
-                          host: channels.email.smtp?.host ?? "",
+                          host: channels.email.smtp?.host ?? "smtp.gmail.com",
                           port: channels.email.smtp?.port ?? 587,
                           secure: channels.email.smtp?.secure ?? false,
                           user: channels.email.smtp?.user ?? "",
@@ -161,85 +156,74 @@ export default function ChannelsPage() {
         )}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-[#d5e0da] bg-white p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">WhatsApp</h2>
-          <span className="rounded-md bg-[#e8efeb] px-2 py-1 text-xs">Pro</span>
-        </div>
-        <p className="text-sm text-[#5a6b63]">
-          <strong>wa.me</strong> : NeverMiss prépare le lien + message — un clic
-          pour envoyer, sans Meta Business payant ni n8n allumé.{" "}
-          <strong>Business API</strong> : envoi 100 % auto si vous avez déjà un
-          compte.
+      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+        <h2 className="font-display text-lg font-semibold">
+          WhatsApp Cloud API (silencieux)
+        </h2>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Meta n’autorise pas d’envoyer WhatsApp en silence sans Business API.
+          Collez votre Phone Number ID + token Meta — les messages partent en
+          arrière-plan, sans onglet, sans Entrée.
         </p>
-        <div className="space-y-2">
-          <Label>Mode</Label>
-          <select
-            className="h-9 w-full max-w-md rounded-lg border border-[#d5e0da] px-3 text-sm"
-            value={channels.whatsapp.mode}
-            onChange={(e) =>
-              setChannels({
-                ...channels,
-                whatsapp: {
-                  ...channels.whatsapp,
-                  enabled: true,
-                  mode: e.target.value as "wa_me" | "business_api",
-                },
-              })
-            }
-          >
-            <option value="wa_me">wa.me (recommandé, gratuit)</option>
-            <option value="business_api">WhatsApp Business API</option>
-          </select>
-        </div>
-        {channels.whatsapp.mode === "business_api" && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Phone Number ID</Label>
-              <Input
-                value={channels.whatsapp.phoneNumberId ?? ""}
-                onChange={(e) =>
-                  setChannels({
-                    ...channels,
-                    whatsapp: {
-                      ...channels.whatsapp,
-                      phoneNumberId: e.target.value,
-                    },
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Access Token</Label>
-              <Input
-                type="password"
-                value={channels.whatsapp.businessToken ?? ""}
-                onChange={(e) =>
-                  setChannels({
-                    ...channels,
-                    whatsapp: {
-                      ...channels.whatsapp,
-                      businessToken: e.target.value,
-                    },
-                  })
-                }
-              />
-            </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Phone Number ID</Label>
+            <Input
+              value={channels.whatsapp.phoneNumberId ?? ""}
+              onChange={(e) =>
+                setChannels({
+                  ...channels,
+                  whatsapp: {
+                    ...channels.whatsapp,
+                    mode: "business_api",
+                    phoneNumberId: e.target.value,
+                  },
+                })
+              }
+              placeholder="Depuis Meta Developers"
+            />
           </div>
-        )}
+          <div className="space-y-2">
+            <Label>Access Token</Label>
+            <Input
+              type="password"
+              value={channels.whatsapp.businessToken ?? ""}
+              onChange={(e) =>
+                setChannels({
+                  ...channels,
+                  whatsapp: {
+                    ...channels.whatsapp,
+                    mode: "business_api",
+                    businessToken: e.target.value,
+                  },
+                })
+              }
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Votre numéro (identité)</Label>
+            <Input
+              value={channels.whatsapp.ownerPhone ?? workspace.ownerPhone ?? ""}
+              onChange={(e) =>
+                setChannels({
+                  ...channels,
+                  whatsapp: {
+                    ...channels.whatsapp,
+                    ownerPhone: e.target.value,
+                  },
+                })
+              }
+              placeholder="+33 6 …"
+            />
+          </div>
+        </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-[#d5e0da] bg-white p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">LinkedIn</h2>
-          <span className="rounded-md bg-[#e8efeb] px-2 py-1 text-xs">
-            Enterprise
-          </span>
-        </div>
-        <p className="text-sm text-[#5a6b63]">
-          L’API messaging LinkedIn est quasi inaccessible. NeverMiss génère le
-          texte « Bravo pour ton nouveau poste… » et ouvre le profil — vous
-          collez en 5 secondes. C’est le levier Enterprise honnête et vendable.
+      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+        <h2 className="font-display text-lg font-semibold">LinkedIn</h2>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          L’API messaging LinkedIn est fermée. NeverMiss prépare le texte ; vous
+          le postez en un copier-coller. Pas de scraping, pas de popup forcée.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -260,10 +244,20 @@ export default function ChannelsPage() {
         </label>
       </section>
 
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--secondary)] p-5 text-sm leading-relaxed text-[var(--muted-foreground)]">
+        <p className="font-medium text-[var(--foreground)]">
+          Vos données vous appartiennent
+        </p>
+        <p className="mt-1">
+          Comptes isolés, sessions sécurisées, mots de passe hashés. Tokens
+          canaux stockés sur votre profil uniquement. Pas de revente.
+        </p>
+      </div>
+
       <Button
         onClick={() => void save()}
         disabled={busy}
-        className="bg-[#0e1512] text-[#e8fff4]"
+        className="bg-[var(--ink)] text-white"
       >
         Enregistrer les canaux
       </Button>

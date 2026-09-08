@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server";
-import { getStore } from "@/lib/store";
+import { getSessionUser } from "@/lib/db/auth";
+import { listContacts, listMessages, listTemplates } from "@/lib/db/repo";
+
+export const runtime = "nodejs";
 
 export async function GET(req: Request) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json([]);
+
   const q = new URL(req.url).searchParams.get("q")?.trim().toLowerCase() ?? "";
   if (!q) return NextResponse.json([]);
 
-  const store = await getStore();
+  const [contacts, templates, messages] = await Promise.all([
+    listContacts(user.id),
+    listTemplates(user.id),
+    listMessages(user.id),
+  ]);
+
   const hits: {
     type: "contact" | "template" | "message" | "page";
     title: string;
@@ -13,7 +24,7 @@ export async function GET(req: Request) {
     href: string;
   }[] = [];
 
-  for (const c of store.contacts) {
+  for (const c of contacts) {
     const blob = [
       c.name,
       c.email,
@@ -37,7 +48,7 @@ export async function GET(req: Request) {
     }
   }
 
-  for (const t of store.templates) {
+  for (const t of templates) {
     const blob = `${t.name} ${t.body} ${t.channel} ${t.occasion}`.toLowerCase();
     if (blob.includes(q)) {
       hits.push({
@@ -49,7 +60,7 @@ export async function GET(req: Request) {
     }
   }
 
-  for (const m of store.messages.slice(0, 50)) {
+  for (const m of messages.slice(0, 50)) {
     const blob = `${m.body} ${m.channel} ${m.status} ${m.subject ?? ""}`.toLowerCase();
     if (blob.includes(q)) {
       hits.push({

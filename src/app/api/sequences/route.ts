@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { getStore, listSequences, upsertSequence } from "@/lib/store";
-import { PLAN_LIMITS } from "@/lib/types";
+import { getSessionUser } from "@/lib/db/auth";
+import { listSequences, upsertSequence } from "@/lib/db/repo";
 import { z } from "zod";
+
+export const runtime = "nodejs";
 
 const schema = z.object({
   id: z.string().optional(),
@@ -25,25 +27,24 @@ const schema = z.object({
 });
 
 export async function GET() {
-  return NextResponse.json(await listSequences());
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  return NextResponse.json(await listSequences(user.id));
 }
 
 export async function POST(req: Request) {
-  const store = await getStore();
-  if (!store.workspace) {
-    return NextResponse.json({ error: "Créez d’abord un espace" }, { status: 400 });
-  }
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const limit = PLAN_LIMITS[store.workspace.plan].sequences;
-  if (!parsed.data.id && store.sequences.length >= limit) {
-    return NextResponse.json(
-      { error: `Limite de séquences atteinte (${limit}). Passez en Pro.` },
-      { status: 403 }
-    );
+  try {
+    const id = await upsertSequence(user.id, user.plan, parsed.data);
+    const all = await listSequences(user.id);
+    return NextResponse.json(all.find((s) => s.id === id));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Erreur";
+    return NextResponse.json({ error: message }, { status: 403 });
   }
-  const sequence = await upsertSequence(parsed.data);
-  return NextResponse.json(sequence);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   CalendarClock,
   ContactRound,
@@ -9,9 +9,18 @@ import {
   MessageSquareText,
   Radio,
   Settings2,
+  Shield,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+type UserProp = {
+  name: string;
+  email: string;
+  plan: string;
+  role: string;
+};
 
 const links = [
   { href: "/app", label: "Vue d’ensemble", icon: LayoutDashboard },
@@ -23,17 +32,29 @@ const links = [
   { href: "/app/settings", label: "Plan & réglages", icon: Settings2 },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ user }: { user: UserProp }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function logout() {
+    await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "logout" }),
+    });
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
-    <aside className="flex w-full flex-col border-b border-[#24332c] bg-[#0e1512] text-[#e8fff4] md:min-h-screen md:w-64 md:border-b-0 md:border-r">
+    <aside className="flex w-full flex-col border-b border-white/10 bg-[var(--ink)] text-white md:min-h-screen md:w-64 md:border-b-0 md:border-r">
       <div className="flex items-center justify-between px-5 py-5">
         <Link href="/" className="font-display text-xl font-semibold">
           NeverMiss
         </Link>
         <Link
           href="/"
-          className="text-xs text-[#a8b5ad] hover:text-white md:hidden"
+          className="text-xs text-white/50 hover:text-white md:hidden"
         >
           Site
         </Link>
@@ -51,8 +72,8 @@ export function AppSidebar() {
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm transition",
                 active
-                  ? "bg-[#7cffb2] text-[#0e1512]"
-                  : "text-[#c8d9d0] hover:bg-white/5"
+                  ? "bg-[var(--accent-strong)] text-white"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
               )}
             >
               <Icon className="size-4" />
@@ -60,9 +81,35 @@ export function AppSidebar() {
             </Link>
           );
         })}
+        {user.role === "admin" && (
+          <Link
+            href="/app/admin"
+            className={cn(
+              "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm transition",
+              pathname.startsWith("/app/admin")
+                ? "bg-[var(--accent-strong)] text-white"
+                : "text-white/70 hover:bg-white/5"
+            )}
+          >
+            <Shield className="size-4" />
+            Admin
+          </Link>
+        )}
       </nav>
-      <div className="mt-auto hidden px-5 pb-6 text-xs leading-relaxed text-[#a8b5ad] md:block">
-        Cron cloud : même PC éteint, les vœux partent.
+      <div className="mt-auto space-y-3 px-5 pb-6">
+        <div className="hidden text-xs leading-relaxed text-white/45 md:block">
+          <p className="font-medium text-white/70">{user.name}</p>
+          <p>{user.email}</p>
+          <p className="mt-1 uppercase tracking-wide">{user.plan}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="flex items-center gap-2 text-xs text-white/55 hover:text-white"
+        >
+          <LogOut className="size-3.5" />
+          Déconnexion
+        </button>
       </div>
     </aside>
   );

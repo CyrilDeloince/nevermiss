@@ -1,20 +1,27 @@
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/db/auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteSearch } from "@/components/site-search";
 
-export default function AppLayout({
+export const runtime = "nodejs";
+
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
   return (
-    <div className="flex min-h-screen flex-col bg-[#f4f7f5] md:flex-row">
-      <AppSidebar />
+    <div className="flex min-h-screen flex-col bg-[var(--fog)] md:flex-row">
+      <AppSidebar user={user} />
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        <div className="sticky top-0 z-40 border-b border-[#d5e0da] bg-[#f4f7f5]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+        <div className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--fog)]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
           <div className="mx-auto flex w-full max-w-5xl items-center gap-3">
             <SiteSearch className="flex-1" />
-            <p className="hidden text-xs text-[#5a6b63] lg:block">
-              Cherche un contact, WhatsApp, horaires…
+            <p className="hidden text-xs text-[var(--muted-foreground)] lg:block">
+              {user.name} · {user.plan}
             </p>
           </div>
         </div>
