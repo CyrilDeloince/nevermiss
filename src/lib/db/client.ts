@@ -1,36 +1,52 @@
-import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 import path from "path";
 import fs from "fs";
 
+type LibsqlClient = {
+  batch: (
+    stmts: string[],
+    mode?: string
+  ) => Promise<unknown>;
+};
+
 function resolveUrl() {
   if (process.env.TURSO_DATABASE_URL) {
     return process.env.TURSO_DATABASE_URL;
   }
-  // Local / persistent volume path
+  if (process.env.VERCEL) {
+    throw new Error(
+      "TURSO_DATABASE_URL manquant sur Vercel. Ajoutez-le dans Project Settings → Environment Variables."
+    );
+  }
   const dir = process.env.DATA_DIR || path.join(process.cwd(), "data");
   fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, "nevermiss.db");
-  return `file:${file}`;
+  return `file:${path.join(dir, "nevermiss.db")}`;
 }
 
 const globalForDb = globalThis as unknown as {
-  __nevermiss_client?: ReturnType<typeof createClient>;
+  __nevermiss_client?: LibsqlClient;
 };
 
-function getClient() {
+function getClient(): LibsqlClient {
   if (!globalForDb.__nevermiss_client) {
-    globalForDb.__nevermiss_client = createClient({
-      url: resolveUrl(),
-      authToken: process.env.TURSO_AUTH_TOKEN,
-    });
+    const url = resolveUrl();
+    const authToken = process.env.TURSO_AUTH_TOKEN;
+    // Remote Turso → web client (no native binary — works on Vercel)
+    // Local file → node client
+    const isRemote =
+      url.startsWith("libsql://") || url.startsWith("https://");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = isRemote
+      ? require("@libsql/client/web")
+      : require("@libsql/client");
+    globalForDb.__nevermiss_client = mod.createClient({ url, authToken });
   }
-  return globalForDb.__nevermiss_client;
+  return globalForDb.__nevermiss_client!;
 }
 
 export function getDb() {
-  return drizzle(getClient(), { schema });
+  return drizzle(getClient() as never, { schema });
 }
 
 export async function ensureSchema() {
