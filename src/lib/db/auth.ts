@@ -1,6 +1,6 @@
 import { randomUUID, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, isNull } from "drizzle-orm";
 import { getDb, ensureSchema } from "./client";
 import { sessions, users, templates, sequences, contacts } from "./schema";
 import type { PlanId } from "../types";
@@ -295,7 +295,81 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     .where(eq(users.id, session.userId))
     .limit(1);
   if (!user) return null;
+  await ensureUserContent(user.id);
   return mapUser(user);
+}
+
+/** Répare templates/séquences manquants (ex. comptes créés avant le seed complet) */
+async function ensureUserContent(userId: string) {
+  const db = getDb();
+  // purge templates with null ids (bug insert)
+  try {
+    await db.delete(templates).where(and(eq(templates.userId, userId), isNull(templates.id)));
+  } catch {
+    /* ignore */
+  }
+
+  const tpls = await db.select().from(templates).where(eq(templates.userId, userId));
+  const byChannel = new Map(tpls.map((t) => [t.channel, t]));
+  const now = new Date().toISOString();
+
+  async function ensureTpl(
+    channel: string,
+    name: string,
+    body: string,
+    subject?: string
+  ) {
+    if (byChannel.has(channel)) return byChannel.get(channel)!;
+    const id = randomUUID();
+    const row = {
+      id,
+      userId,
+      name,
+      occasion: "birthday",
+      channel,
+      subject: subject ?? null,
+      body,
+      createdAt: now,
+    };
+    await db.insert(templates).values(row);
+    byChannel.set(channel, row as (typeof tpls)[0]);
+    return row as (typeof tpls)[0];
+  }
+
+  const wa = await ensureTpl(
+    "whatsapp",
+    "Anniversaire — court",
+    `Hey {{prenom}} ! Joyeux anniversaire — passe une super journée !`
+  );
+  const em = await ensureTpl(
+    "email",
+    "Anniversaire — chaleureux",
+    `Bonjour {{prenom}},\n\nJe voulais simplement te souhaiter un excellent anniversaire.\n\nQue cette année t’apporte santé et belles réussites.\n\nÀ très vite,\n{{signature}}`,
+    "Joyeux anniversaire {{prenom}}"
+  );
+  const li = await ensureTpl(
+    "linkedin",
+    "Anniversaire — LinkedIn",
+    `Joyeux anniversaire {{prenom}} ! Belle continuation pour cette nouvelle année.`
+  );
+
+  const seqs = await db.select().from(sequences).where(eq(sequences.userId, userId));
+  const hasBirthday = seqs.some((s) => s.occasion === "birthday" && s.active);
+  if (!hasBirthday) {
+    await db.insert(sequences).values({
+      id: randomUUID(),
+      userId,
+      name: "Séquence anniversaire",
+      occasion: "birthday",
+      active: true,
+      stepsJson: JSON.stringify([
+        { id: randomUUID(), dayOffset: 0, templateId: wa.id, channel: "whatsapp" },
+        { id: randomUUID(), dayOffset: 0, templateId: em.id, channel: "email" },
+        { id: randomUUID(), dayOffset: 0, templateId: li.id, channel: "linkedin" },
+      ]),
+      createdAt: now,
+    });
+  }
 }
 
 export async function requireUser(): Promise<SessionUser> {

@@ -159,7 +159,13 @@ export async function upsertTemplate(
   if (input.id) {
     await db
       .update(templates)
-      .set(input)
+      .set({
+        name: input.name,
+        occasion: input.occasion,
+        channel: input.channel,
+        subject: input.subject,
+        body: input.body,
+      })
       .where(and(eq(templates.id, input.id), eq(templates.userId, userId)));
     return input.id;
   }
@@ -167,7 +173,11 @@ export async function upsertTemplate(
   await db.insert(templates).values({
     id,
     userId,
-    ...input,
+    name: input.name,
+    occasion: input.occasion,
+    channel: input.channel,
+    subject: input.subject ?? null,
+    body: input.body,
     createdAt: new Date().toISOString(),
   });
   return id;
