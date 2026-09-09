@@ -79,7 +79,7 @@ export function SiteSearch({ className }: { className?: string }) {
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Rechercher… (contacts, WhatsApp, horaires)"
+          placeholder="Search… (contacts, WhatsApp, send times)"
           className="h-10 border-[#d5e0da] bg-white pl-9 pr-14 text-sm"
           aria-label="Search Tend"
         />
