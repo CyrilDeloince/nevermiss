@@ -63,7 +63,7 @@ async function sendEmail(
     await transporter.sendMail({
       from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
       to: contact.email,
-      subject: message.subject ?? "Message from Tend",
+      subject: message.subject ?? "Message from Jardin",
       text: message.body,
     });
     return {

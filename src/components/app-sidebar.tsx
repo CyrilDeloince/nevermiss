@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { en } from "@/lib/i18n/en";
+import { JardinMark } from "@/components/jardin-mark";
 
 type UserProp = {
   name: string;
@@ -50,7 +51,8 @@ export function AppSidebar({ user }: { user: UserProp }) {
   return (
     <aside className="flex w-full flex-col border-b border-white/10 bg-[var(--ink)] text-white md:min-h-screen md:w-64 md:border-b-0 md:border-r">
       <div className="flex items-center justify-between px-5 py-5">
-        <Link href="/" className="font-display text-xl font-semibold">
+        <Link href="/" className="flex items-center gap-2 font-display text-xl font-semibold">
+          <JardinMark className="size-7" />
           {en.brand.name}
         </Link>
         <Link

@@ -222,7 +222,7 @@ export default function ChannelsPage() {
       <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
         <h2 className="font-display text-lg font-semibold">LinkedIn</h2>
         <p className="text-sm text-[var(--muted-foreground)]">
-          LinkedIn messaging API is closed. Tend prepares the draft text; you
+          LinkedIn messaging API is closed. Jardin prepares the draft text; you
           le postez en un copier-coller. Pas de scraping, pas de popup forcée.
         </p>
         <label className="flex items-center gap-2 text-sm">

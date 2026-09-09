@@ -81,7 +81,7 @@ export function SiteSearch({ className }: { className?: string }) {
           onFocus={() => setOpen(true)}
           placeholder="Search… (contacts, WhatsApp, send times)"
           className="h-10 border-[#d5e0da] bg-white pl-9 pr-14 text-sm"
-          aria-label="Search Tend"
+          aria-label="Search Jardin"
         />
         <kbd className="pointer-events-none absolute top-1/2 right-2 hidden -translate-y-1/2 rounded border border-[#d5e0da] bg-[#f4f7f5] px-1.5 py-0.5 text-[10px] text-[#5a6b63] sm:inline">
           ⌘K

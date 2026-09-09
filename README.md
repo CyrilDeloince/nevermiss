@@ -1,37 +1,39 @@
-# Tend
+# Jardin
 
 **The art of caring for those who gave you their trust.**
 
-You keep chasing new clients. Tend helps you delight the ones you already have. Cultivate your garden. The butterflies will come.
+*Cultivate your garden. The butterflies will come.*  
+(After Voltaire: *Il faut cultiver notre jardin*)
 
-Prototype for relationship nurture: birthdays, holidays, warm follow ups across Email, WhatsApp, Discord and LinkedIn.
+You keep chasing new clients. Jardin helps you delight the ones you already have.
 
 **Local app:** [http://127.0.0.1:43123](http://127.0.0.1:43123)
 
 ---
 
-## Sales demo accounts
+## Sales demo
 
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | `admin@nevermiss.app` | `nevermiss2026` |
 | Sales / Pro | `demo@nevermiss.app` | `demo2026` |
 
-Open the demo, then run the **Sales day simulation** on the overview to walk a prospect through day J (no real sends).
-
-Switch Free / Pro / Enterprise anytime under Plan & settings.
+On Overview, run **Sales day simulation** for the pitch (no real sends).
 
 ---
 
-## What ships
+## Rename the Vercel URL (away from nevermiss)
 
-- Isolated accounts, httpOnly sessions, hashed passwords
-- Each user only sees their own contacts
-- Channel tokens live on the profile, never sold
-- Admin sees usage totals, not private message text
-- Email SMTP can send for real when configured
-- WhatsApp via Meta Cloud API when configured; LinkedIn stays draft only
-- Copy lives in `src/lib/i18n/en.ts` so more languages can plug in later
+In the Vercel dashboard (project that currently serves `nevermiss-*.vercel.app`):
+
+1. **Settings → General → Project Name** → set to `jardin`
+2. Save. Your new URL becomes `https://jardin.vercel.app` (or `jardin-xxxx.vercel.app` if taken)
+3. Optional: **Settings → Domains** → add a custom domain later (`jardin.app`, etc.)
+4. Old `nevermiss` URL may keep working as a redirect for a while; prefer sharing the new one in the meeting
+
+GitHub repo can stay `nevermiss` for now; rename later under **Settings → General → Repository name** if you want.
+
+---
 
 ## Run locally
 
@@ -40,4 +42,4 @@ npm install
 npm run dev
 ```
 
-Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
+Copy lives in `src/lib/i18n/en.ts` for future languages.
