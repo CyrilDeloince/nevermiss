@@ -14,9 +14,9 @@ const bricolage = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "NeverMiss — Ne ratez plus jamais une relation",
+  title: "Tend — The art of caring for those who gave you their trust",
   description:
-    "SaaS qui envoie automatiquement vos vœux d’anniversaire, Noël et relances LinkedIn. Email dès aujourd’hui. Free, Pro 20€/mois, Enterprise.",
+    "Tend helps you delight the clients you already have. Birthdays, holidays, warm follow ups across email, WhatsApp, Discord and LinkedIn.",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${figtree.variable} ${bricolage.variable} h-full`}>
+    <html lang="en" className={`${figtree.variable} ${bricolage.variable} h-full`}>
       <body className="flex min-h-full flex-col font-sans">
         {children}
         <HelpChatbot />

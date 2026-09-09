@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { en } from "@/lib/i18n/en";
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = en.login;
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,146 +34,159 @@ export default function LoginPage() {
     const data = await res.json();
     setBusy(false);
     if (!res.ok) {
-      setError(data.error || "Erreur");
+      setError(data.error || "Something went wrong");
       return;
     }
     router.push("/app");
     router.refresh();
   }
 
-  function fillDemo(kind: "admin" | "sales") {
-    if (kind === "admin") {
-      setEmail("admin@nevermiss.app");
-      setPassword("nevermiss2026");
-    } else {
-      setEmail("demo@nevermiss.app");
-      setPassword("demo2026");
+  async function demoLogin() {
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "login",
+        email: "demo@nevermiss.app",
+        password: "demo2026",
+      }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) {
+      setError(data.error || "Demo login failed");
+      return;
     }
-    setMode("login");
+    router.push("/app");
+    router.refresh();
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[var(--ink)] text-white">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_15%_0%,rgba(232,93,74,0.22),transparent_45%),radial-gradient(ellipse_at_90%_20%,rgba(61,90,128,0.35),transparent_50%),linear-gradient(165deg,#0c1222_0%,#141c2e_50%,#0a0f1a_100%)]"
-      />
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
-        <Link href="/" className="font-display text-2xl font-semibold tracking-tight">
-          NeverMiss
-        </Link>
-        <h1 className="mt-8 font-display text-3xl font-semibold">
-          {mode === "login" ? "Connexion" : "Créer un compte"}
-        </h1>
-        <p className="mt-2 text-sm text-white/65">
-          Vos contacts et messages restent liés à votre compte — reconnectez-vous,
-          tout est là.
+    <div className="grid min-h-screen lg:grid-cols-2">
+      <div className="relative hidden overflow-hidden bg-[linear-gradient(160deg,#16352b_0%,#1f4a3a_45%,#2d6a4f_100%)] p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 20%, rgba(212,167,74,0.35), transparent 45%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.12), transparent 40%)",
+          }}
+        />
+        <div className="relative">
+          <Link href="/" className="font-display text-3xl font-semibold tracking-tight">
+            {en.brand.name}
+          </Link>
+          <p className="mt-2 text-sm text-white/70">{en.brand.tagline}</p>
+        </div>
+        <div className="relative max-w-md space-y-4">
+          <p className="font-display text-3xl leading-snug">{en.brand.promise}</p>
+          <p className="text-sm leading-relaxed text-white/75">
+            Your contacts stay in your account. Channel tokens live on your
+            profile only. Admins see usage numbers, never your private messages.
+          </p>
+        </div>
+        <p className="relative text-xs text-white/50">
+          Demo: demo@nevermiss.app · demo2026
         </p>
+      </div>
 
-        <form onSubmit={submit} className="mt-8 space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-          {mode === "signup" && (
+      <div className="flex items-center justify-center bg-[#f7f4ee] p-6">
+        <div className="w-full max-w-md space-y-6 rounded-2xl border border-[#e4ddd0] bg-white p-8 shadow-sm">
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-[#16352b]">
+              {mode === "login" ? t.title : t.signupTitle}
+            </h1>
+            <p className="mt-1 text-sm text-[#5c6b63]">
+              {mode === "login" ? t.subtitle : t.signupSubtitle}
+            </p>
+          </div>
+
+          <form onSubmit={submit} className="space-y-4">
+            {mode === "signup" ? (
+              <div className="space-y-2">
+                <Label htmlFor="name">{t.name}</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Alex Martin"
+                  required
+                />
+              </div>
+            ) : null}
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-white/80">
-                Prénom
-              </Label>
+              <Label htmlFor="email">{t.email}</Label>
               <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
                 required
-                className="border-white/15 bg-white/10 text-white"
               />
             </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-white/80">
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="border-white/15 bg-white/10 text-white"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-white/80">
-              Mot de passe
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="border-white/15 bg-white/10 text-white"
-            />
-          </div>
-          {error && <p className="text-sm text-[#ff8f7a]">{error}</p>}
+            <div className="space-y-2">
+              <Label htmlFor="password">{t.password}</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                minLength={8}
+                required
+              />
+            </div>
+            {error ? (
+              <p className="text-sm text-[#b33b3b]">{error}</p>
+            ) : null}
+            <Button
+              type="submit"
+              disabled={busy}
+              className="w-full bg-[#1f4a3a] text-white hover:bg-[#16352b]"
+            >
+              {busy ? "…" : mode === "login" ? t.submit : t.create}
+            </Button>
+          </form>
+
           <Button
-            type="submit"
+            type="button"
+            variant="outline"
             disabled={busy}
-            className="w-full bg-[var(--accent-strong)] text-white hover:bg-[#d44d3a]"
+            className="w-full border-[#d4a74a] text-[#1f4a3a] hover:bg-[#fff8e8]"
+            onClick={() => void demoLogin()}
           >
-            {busy
-              ? "…"
-              : mode === "login"
-                ? "Se connecter"
-                : "Créer mon compte"}
+            {t.demo}
           </Button>
-        </form>
 
-        <p className="mt-4 text-center text-sm text-white/60">
-          {mode === "login" ? (
-            <>
-              Pas de compte ?{" "}
-              <button
-                type="button"
-                className="text-[var(--accent-strong)] underline-offset-2 hover:underline"
-                onClick={() => setMode("signup")}
-              >
-                S’inscrire
-              </button>
-            </>
-          ) : (
-            <>
-              Déjà inscrit ?{" "}
-              <button
-                type="button"
-                className="text-[var(--accent-strong)] underline-offset-2 hover:underline"
-                onClick={() => setMode("login")}
-              >
-                Se connecter
-              </button>
-            </>
-          )}
-        </p>
-
-        <div className="mt-8 rounded-xl border border-white/10 bg-black/20 p-4 text-xs text-white/70">
-          <p className="mb-2 font-medium text-white/90">Démo sales — comptes prêts</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => fillDemo("sales")}
-              className="rounded-md bg-white/10 px-3 py-1.5 hover:bg-white/15"
-            >
-              Sales · demo@nevermiss.app
-            </button>
-            <button
-              type="button"
-              onClick={() => fillDemo("admin")}
-              className="rounded-md bg-white/10 px-3 py-1.5 hover:bg-white/15"
-            >
-              Admin · tout voir
-            </button>
-          </div>
+          <p className="text-center text-sm text-[#5c6b63]">
+            {mode === "login" ? (
+              <>
+                {t.switchSignup}{" "}
+                <button
+                  type="button"
+                  className="font-medium text-[#1f4a3a] underline"
+                  onClick={() => setMode("signup")}
+                >
+                  {t.create}
+                </button>
+              </>
+            ) : (
+              <>
+                {t.switchLogin}{" "}
+                <button
+                  type="button"
+                  className="font-medium text-[#1f4a3a] underline"
+                  onClick={() => setMode("login")}
+                >
+                  {t.submit}
+                </button>
+              </>
+            )}
+          </p>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -10,10 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 type Msg = { role: "user" | "assistant"; text: string; links?: { label: string; href: string }[] };
 
 const SUGGESTIONS = [
-  "Envoyer un anniversaire WhatsApp",
-  "Changer les horaires ami / travail",
-  "Ajouter un contact",
-  "Déployer sur GitHub / Vercel",
+  "Send a birthday on WhatsApp",
+  "Change friend / work send times",
+  "Add a contact",
+  "Deploy on Vercel",
 ];
 
 export function HelpChatbot() {
@@ -22,9 +22,9 @@ export function HelpChatbot() {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: "assistant",
-      text: "Salut ! Je suis l’assistant NeverMiss. Dis-moi ce que tu veux faire — je te guide vers la bonne page.",
+      text: "Hi. I am the Tend guide. Tell me what you want to do and I will point you to the right page.",
       links: [
-        { label: "File d’envoi", href: "/app/messages" },
+        { label: "Send queue", href: "/app/messages" },
         { label: "Contacts", href: "/app/contacts" },
       ],
     },
@@ -52,18 +52,18 @@ export function HelpChatbot() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="fixed right-4 bottom-4 z-50 flex size-14 items-center justify-center rounded-full bg-[#0e1512] text-[#7cffb2] shadow-lg hover:bg-[#1a2822] md:right-6 md:bottom-6"
-        aria-label="Ouvrir l’assistant IA"
+        className="fixed right-4 bottom-4 z-50 flex size-14 items-center justify-center rounded-full bg-[var(--ink)] text-[#e6d3a4] shadow-lg hover:bg-[#1a2820] md:right-6 md:bottom-6"
+        aria-label="Open Tend guide"
       >
         {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}
       </button>
 
       {open && (
-        <div className="fixed right-4 bottom-20 z-50 flex h-[min(520px,70vh)] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[#d5e0da] bg-white shadow-2xl md:right-6 md:bottom-24">
-          <div className="bg-[#0e1512] px-4 py-3 text-[#e8fff4]">
-            <p className="font-display font-semibold">Assistant NeverMiss</p>
-            <p className="text-xs text-[#a8b5ad]">
-              Guide-toi dans l’app — WhatsApp, Gmail, horaires, déploiement…
+        <div className="fixed right-4 bottom-20 z-50 flex h-[min(520px,70vh)] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-2xl md:right-6 md:bottom-24">
+          <div className="bg-[var(--ink)] px-4 py-3 text-[#f7f4ee]">
+            <p className="font-display font-semibold">Tend guide</p>
+            <p className="text-xs text-white/55">
+              WhatsApp, Gmail, send times, deploy…
             </p>
           </div>
 

@@ -81,7 +81,7 @@ export function SiteSearch({ className }: { className?: string }) {
           onFocus={() => setOpen(true)}
           placeholder="Rechercher… (contacts, WhatsApp, horaires)"
           className="h-10 border-[#d5e0da] bg-white pl-9 pr-14 text-sm"
-          aria-label="Rechercher dans NeverMiss"
+          aria-label="Search Tend"
         />
         <kbd className="pointer-events-none absolute top-1/2 right-2 hidden -translate-y-1/2 rounded border border-[#d5e0da] bg-[#f4f7f5] px-1.5 py-0.5 text-[10px] text-[#5a6b63] sm:inline">
           ⌘K

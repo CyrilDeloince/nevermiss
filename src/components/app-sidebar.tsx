@@ -14,6 +14,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { en } from "@/lib/i18n/en";
 
 type UserProp = {
   name: string;
@@ -23,13 +24,13 @@ type UserProp = {
 };
 
 const links = [
-  { href: "/app", label: "Vue d’ensemble", icon: LayoutDashboard },
-  { href: "/app/contacts", label: "Contacts", icon: ContactRound },
-  { href: "/app/templates", label: "Modèles", icon: MessageSquareText },
-  { href: "/app/sequences", label: "Séquences", icon: Sparkles },
-  { href: "/app/messages", label: "File d’envoi", icon: CalendarClock },
-  { href: "/app/channels", label: "Canaux", icon: Radio },
-  { href: "/app/settings", label: "Plan & réglages", icon: Settings2 },
+  { href: "/app", label: en.app.overview, icon: LayoutDashboard },
+  { href: "/app/contacts", label: en.app.contacts, icon: ContactRound },
+  { href: "/app/templates", label: en.app.templates, icon: MessageSquareText },
+  { href: "/app/sequences", label: en.app.sequences, icon: Sparkles },
+  { href: "/app/messages", label: en.app.messages, icon: CalendarClock },
+  { href: "/app/channels", label: en.app.channels, icon: Radio },
+  { href: "/app/settings", label: en.app.settings, icon: Settings2 },
 ];
 
 export function AppSidebar({ user }: { user: UserProp }) {
@@ -50,7 +51,7 @@ export function AppSidebar({ user }: { user: UserProp }) {
     <aside className="flex w-full flex-col border-b border-white/10 bg-[var(--ink)] text-white md:min-h-screen md:w-64 md:border-b-0 md:border-r">
       <div className="flex items-center justify-between px-5 py-5">
         <Link href="/" className="font-display text-xl font-semibold">
-          NeverMiss
+          {en.brand.name}
         </Link>
         <Link
           href="/"
@@ -108,7 +109,7 @@ export function AppSidebar({ user }: { user: UserProp }) {
           className="flex items-center gap-2 text-xs text-white/55 hover:text-white"
         >
           <LogOut className="size-3.5" />
-          Déconnexion
+          {en.app.logout}
         </button>
       </div>
     </aside>

@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { DemoSimulation } from "@/components/demo-simulation";
 import type { AppStore } from "@/lib/types";
 import { PLAN_LIMITS } from "@/lib/types";
 import { formatFrDate } from "@/lib/messages-client";
 import { cn } from "@/lib/utils";
+import { en } from "@/lib/i18n/en";
 
 type StorePayload = AppStore & {
   authenticated?: boolean;
@@ -46,13 +48,13 @@ export default function AppHomePage() {
     await refresh();
     setBusy(false);
     setFlash(
-      `Planifiés : ${schedule.created ?? 0} · Traités : ${process.processed ?? 0}`
+      `Scheduled: ${schedule.created ?? 0} · Processed: ${process.processed ?? 0}`
     );
   }
 
   if (loading) {
     return (
-      <p className="text-sm text-[var(--muted-foreground)]">Chargement…</p>
+      <p className="text-sm text-[var(--muted-foreground)]">{en.app.loading}</p>
     );
   }
 
@@ -62,25 +64,27 @@ export default function AppHomePage() {
     .filter((m) => m.status === "scheduled" || m.status === "ready")
     .slice(0, 5);
   const activity = store?.activity ?? [];
+  const firstName =
+    store?.user?.name?.split(" ")[0] ?? store?.workspace?.ownerName;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">
-            Bonjour {store?.user?.name?.split(" ")[0] ?? store?.workspace?.ownerName}
+            {en.app.greeting} {firstName}
           </h1>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Plan {limits.label} · {store?.contacts.length ?? 0}/{limits.contacts}{" "}
-            contacts · vos données restent sur votre compte.
+            {limits.label} plan · {store?.contacts.length ?? 0}/{limits.contacts}{" "}
+            contacts · your garden stays on your account
           </p>
         </div>
         <Button
           onClick={() => void runScheduler()}
           disabled={busy}
-          className="bg-[var(--ink)] text-white hover:bg-[#1a2438]"
+          className="bg-[var(--ink)] text-white hover:bg-[#1a2820]"
         >
-          {busy ? "…" : "Programmer & envoyer"}
+          {busy ? "…" : en.app.schedule}
         </Button>
       </div>
 
@@ -90,22 +94,24 @@ export default function AppHomePage() {
         </p>
       )}
 
+      <DemoSimulation />
+
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           {
-            label: "Contacts",
+            label: en.app.contacts,
             value: String(store?.contacts.length ?? 0),
             href: "/app/contacts",
           },
           {
-            label: "Messages planifiés",
+            label: "Scheduled",
             value: String(
               store?.messages.filter((m) => m.status === "scheduled").length ?? 0
             ),
             href: "/app/messages",
           },
           {
-            label: "Envoyés",
+            label: "Sent",
             value: String(
               store?.messages.filter((m) => m.status === "sent").length ?? 0
             ),
@@ -127,18 +133,18 @@ export default function AppHomePage() {
 
       <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">Prochains envois</h2>
+          <h2 className="font-display text-lg font-semibold">{en.app.upcoming}</h2>
           <Link
             href="/app/messages"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
           >
-            Tout voir
+            {en.app.seeAll}
           </Link>
         </div>
         {upcoming.length === 0 ? (
           <p className="text-sm text-[var(--muted-foreground)]">
-            Aucun message planifié. Ajoutez un contact avec date d’anniversaire,
-            puis cliquez « Programmer & envoyer ».
+            No messages scheduled yet. Add a contact with a birthday, then click
+            Schedule & send.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -148,7 +154,9 @@ export default function AppHomePage() {
                 className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-3 last:border-0 last:pb-0"
               >
                 <div>
-                  <p className="text-sm font-medium">{m.channel} · {m.status}</p>
+                  <p className="text-sm font-medium">
+                    {m.channel} · {m.status}
+                  </p>
                   <p className="text-xs text-[var(--muted-foreground)] line-clamp-1">
                     {m.body}
                   </p>
@@ -163,9 +171,9 @@ export default function AppHomePage() {
       </section>
 
       <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
-        <h2 className="mb-3 font-display text-lg font-semibold">Activité</h2>
+        <h2 className="mb-3 font-display text-lg font-semibold">{en.app.activity}</h2>
         {activity.length === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">Rien pour l’instant.</p>
+          <p className="text-sm text-[var(--muted-foreground)]">Nothing yet.</p>
         ) : (
           <ul className="space-y-2">
             {activity.slice(0, 8).map((a) => (
@@ -179,11 +187,9 @@ export default function AppHomePage() {
       </section>
 
       <p className="text-xs leading-relaxed text-[var(--muted-foreground)]">
-        Confidentialité : chaque compte ne voit que ses propres contacts. Email
-        SMTP et WhatsApp Business API partent en arrière-plan, sans ouvrir
-        d’onglet.{" "}
+        {en.app.privacyNote}{" "}
         <Link href="/app/channels" className="underline underline-offset-2">
-          Configurer les canaux
+          Configure channels
         </Link>
       </p>
     </div>
