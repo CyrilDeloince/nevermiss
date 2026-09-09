@@ -170,7 +170,7 @@ export default function ContactsPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Message perso (ex. Bon anniv bb)</Label>
+            <Label>Personal note (optional birthday line)</Label>
             <Textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
