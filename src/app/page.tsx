@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { copy } from "@/lib/i18n/en";
+import { JardinMark } from "@/components/jardin-mark";
 
 export default function LandingPage() {
   return (
@@ -16,7 +17,8 @@ export default function LandingPage() {
       />
 
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <div className="font-display text-2xl font-semibold tracking-tight">
+        <div className="flex items-center gap-2.5 font-display text-2xl font-semibold tracking-tight">
+          <JardinMark className="size-9" />
           {copy.brand}
         </div>
         <nav className="hidden items-center gap-8 text-sm text-white/55 md:flex">
@@ -43,12 +45,18 @@ export default function LandingPage() {
 
       <section className="relative z-10 mx-auto grid min-h-[82vh] w-full max-w-6xl items-center gap-10 px-6 pb-16 pt-8 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
-          <p className="animate-rise mb-4 max-w-md text-sm tracking-wide text-[#c9a25c]">
+          <p className="animate-rise mb-3 text-sm tracking-wide text-[#c9a25c]">
             {copy.tagline}
           </p>
           <h1 className="animate-rise-delay-1 font-display text-5xl leading-[1.02] font-semibold tracking-tight sm:text-6xl lg:text-7xl">
             {copy.brand}
           </h1>
+          <p className="animate-rise-delay-1 mt-3 font-display text-xl text-[#e6d3a4] sm:text-2xl">
+            {copy.citation}
+          </p>
+          <p className="animate-rise-delay-2 mt-2 text-xs tracking-wide text-white/40">
+            {copy.citationSource}
+          </p>
           <p className="animate-rise-delay-2 mt-5 max-w-xl text-lg text-white/70 sm:text-xl">
             {copy.heroSupport}
           </p>
@@ -78,7 +86,10 @@ export default function LandingPage() {
           <div className="absolute inset-0 rounded-[2rem] bg-[#7a9e7e]/15 blur-2xl" />
           <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#15241c]/90 p-6 shadow-2xl backdrop-blur">
             <div className="mb-4 flex items-center justify-between text-xs text-white/50">
-              <span>Today · garden view</span>
+              <span className="flex items-center gap-2">
+                <JardinMark className="size-5" />
+                Today · garden view
+              </span>
               <span className="rounded-md bg-[#c9a25c]/20 px-2 py-1 text-[#e6d3a4]">
                 Quiet care
               </span>

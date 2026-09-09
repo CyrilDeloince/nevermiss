@@ -14,9 +14,13 @@ const bricolage = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Tend — The art of caring for those who gave you their trust",
+  title: "Jardin — The art of caring for those who gave you their trust",
   description:
-    "Tend helps you delight the clients you already have. Birthdays, holidays, warm follow ups across email, WhatsApp, Discord and LinkedIn.",
+    "Jardin helps you delight the clients you already have. Cultivate your garden. The butterflies will come.",
+  icons: {
+    icon: "/jardin-mark.png",
+    apple: "/jardin-mark.png",
+  },
 };
 
 export default function RootLayout({

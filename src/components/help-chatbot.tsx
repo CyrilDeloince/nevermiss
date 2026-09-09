@@ -22,7 +22,7 @@ export function HelpChatbot() {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: "assistant",
-      text: "Hi. I am the Tend guide. Tell me what you want to do and I will point you to the right page.",
+      text: "Hi. I am the Jardin guide. Tell me what you want to do and I will point you to the right page.",
       links: [
         { label: "Send queue", href: "/app/messages" },
         { label: "Contacts", href: "/app/contacts" },
@@ -53,7 +53,7 @@ export function HelpChatbot() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="fixed right-4 bottom-4 z-50 flex size-14 items-center justify-center rounded-full bg-[var(--ink)] text-[#e6d3a4] shadow-lg hover:bg-[#1a2820] md:right-6 md:bottom-6"
-        aria-label="Open Tend guide"
+        aria-label="Open Jardin guide"
       >
         {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}
       </button>
@@ -61,7 +61,7 @@ export function HelpChatbot() {
       {open && (
         <div className="fixed right-4 bottom-20 z-50 flex h-[min(520px,70vh)] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-2xl md:right-6 md:bottom-24">
           <div className="bg-[var(--ink)] px-4 py-3 text-[#f7f4ee]">
-            <p className="font-display font-semibold">Tend guide</p>
+            <p className="font-display font-semibold">Jardin guide</p>
             <p className="text-xs text-white/55">
               WhatsApp, Gmail, send times, deploy…
             </p>

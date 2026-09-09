@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { en } from "@/lib/i18n/en";
+import { JardinMark } from "@/components/jardin-mark";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -74,10 +75,14 @@ export default function LoginPage() {
           }}
         />
         <div className="relative">
-          <Link href="/" className="font-display text-3xl font-semibold tracking-tight">
+          <Link href="/" className="flex items-center gap-3 font-display text-3xl font-semibold tracking-tight">
+            <JardinMark className="size-10" />
             {en.brand.name}
           </Link>
           <p className="mt-2 text-sm text-white/70">{en.brand.tagline}</p>
+          <p className="mt-4 font-display text-lg text-[#e6d3a4]">
+            {en.brand.citation}
+          </p>
         </div>
         <div className="relative max-w-md space-y-4">
           <p className="font-display text-3xl leading-snug">{en.brand.promise}</p>

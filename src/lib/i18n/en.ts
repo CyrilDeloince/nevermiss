@@ -1,8 +1,10 @@
 /** English copy (default). Swap this module later for FR / other locales. */
 export const en = {
   brand: {
-    name: "Tend",
+    name: "Jardin",
     tagline: "The art of caring for those who gave you their trust",
+    citation: "Cultivate your garden. The butterflies will come.",
+    citationSource: "After Voltaire — Il faut cultiver notre jardin",
     promise:
       "You want more new clients. Start by delighting the ones you already have. Cultivate your garden. The butterflies will come.",
   },
@@ -15,9 +17,9 @@ export const en = {
     pricingCta: "See pricing",
   },
   heroSupport:
-    "You keep chasing new clients. Tend helps you delight the ones you already have. Cultivate your garden. The butterflies will come.",
+    "You keep chasing new clients. Jardin helps you delight the ones you already have. Birthdays, holidays, warm check ins across the channels they already use.",
   howTitle: "Three quiet steps",
-  howSupport: "Connect once. Choose who matters. Tend remembers the rest.",
+  howSupport: "Connect once. Choose who matters. Jardin remembers the rest.",
   steps: [
     {
       n: "1",
@@ -27,7 +29,7 @@ export const en = {
     {
       n: "2",
       t: "Choose who to nurture",
-      d: "Birthdays, holidays, warm follow ups. You pick the people. Tend handles the timing.",
+      d: "Birthdays, holidays, warm follow ups. You pick the people. Jardin handles the timing.",
     },
     {
       n: "3",
@@ -41,7 +43,7 @@ export const en = {
     {
       name: "Free",
       price: "€0",
-      desc: "Try Tend on a handful of relationships.",
+      desc: "Try Jardin on a handful of relationships.",
       highlight: false,
     },
     {
@@ -60,7 +62,7 @@ export const en = {
   privacyTitle: "Your garden stays yours",
   privacyBody:
     "Each account only sees its own contacts. Passwords are hashed. Sessions stay in secure cookies. Channel tokens live on your profile, never sold. Admins see usage totals, not private message text.",
-  footer: "Tend · care for the people who already trust you",
+  footer: "Jardin · care for the people who already trust you",
   login: {
     title: "Welcome back",
     signupTitle: "Create your space",
@@ -108,6 +110,8 @@ export const en = {
 export const copy = {
   brand: en.brand.name,
   tagline: en.brand.tagline,
+  citation: en.brand.citation,
+  citationSource: en.brand.citationSource,
   heroSupport: en.heroSupport,
   nav: en.nav,
   howTitle: en.howTitle,
